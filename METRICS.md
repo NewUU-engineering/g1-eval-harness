@@ -1,0 +1,95 @@
+# Metrics
+
+Computed by `harness/metrics.py` for every (scenario, seed) trial, then aggregated as
+mean / std / min / max over seeds. All metrics come from the MuJoCo state, so they are
+identical whether the policy runs in-process, over the socket, or over DDS.
+
+Notation: control step k (50 Hz, Δt = 0.02 s), physics step i (500 Hz). Joint arrays are
+29-DOF in canonical order. "Heading frame" = world frame rotated by the pelvis yaw.
+
+## 1. Falls and survival
+
+| key | unit | definition |
+|---|---|---|
+| `fall` | bool | trial ended early for any reason below |
+| `fall_reason` | text | `base_too_low` (pelvis z < 0.40 m), `base_tilt` (angle between pelvis z-axis and world z > 60°), `ground_contact:<body>` (any body except the two `ankle_roll_link`s touches the floor), `sim_unstable` (MuJoCo NaN/Inf acceleration), `invalid_action` (policy returned NaN/Inf) |
+| `time_to_fall_s` | s | sim time at the end of the trial if it fell, else empty |
+| `survival_fraction` | 0–1 | time survived / scenario duration (1.0 if no fall) |
+
+In aggregates, the mean of `fall` is the **fall rate** over seeds.
+
+## 2. Velocity tracking
+
+Measured only for t ≥ 1.0 s (the robot starts from rest) and only while upright.
+v = pelvis linear velocity in the heading frame, ω_z = world yaw rate, c = command.
+
+| key | unit | definition |
+|---|---|---|
+| `lin_vel_xy_rmse` | m/s | **primary.** RMSE between the 1 s moving average of (v_x, v_y) and the command: sqrt(mean_k ‖c̄_xy − v̄_xy‖²) |
+| `yaw_rate_rmse` | rad/s | **primary.** same with the 1 s moving average of ω_z |
+| `lin_vel_xy_rmse_instant` | m/s | same without averaging |
+| `yaw_rate_rmse_instant` | rad/s | same without averaging |
+| `mean_forward_vel`, `mean_lateral_vel` | m/s | mean heading-frame v_x, v_y |
+
+Why the 1 s window: a walking G1's pelvis sways and twists every step (instantaneous yaw rate
+oscillates by ~±1 rad/s while walking straight). Without averaging, the metric would mostly
+measure gait style rather than whether the robot goes where it is told. 1 s covers at least
+one full gait cycle. The instantaneous versions are kept for completeness.
+
+Returns empty (n/a) if the robot fell before 1 s; use the fall metrics in that case.
+
+## 3. Motion tracking error (motion-tracking policies only)
+
+Only computed if the adapter implements `reference(t)` (BeyondMimic, SONIC, any imitation policy).
+
+| key | unit | definition |
+|---|---|---|
+| `joint_pos_tracking_rmse` | rad | sqrt(mean over steps and masked joints of (q − q_ref)²) |
+
+The adapter provides the reference (it owns the motion file and its timing); the harness
+measures the error against the simulated robot. Velocity policies show n/a.
+
+## 4. Smoothness
+
+| key | unit | definition |
+|---|---|---|
+| `action_rate_rms` | rad/s | RMS over steps and joints of (q*_k − q*_(k−1)) / Δt, where q* is the commanded joint target. Measures how jumpy the policy's output is. **Primary smoothness metric.** |
+| `joint_acc_rms` | rad/s² | RMS of (dq_k − dq_(k−1)) / Δt |
+| `joint_jerk_rms` | rad/s³ | RMS of the second difference of dq divided by Δt² |
+
+Accelerations and jerk are finite differences at 50 Hz. Foot impacts produce real spikes,
+so compare jerk between policies on the same scenario, not as an absolute number.
+
+## 5. Effort
+
+| key | unit | definition |
+|---|---|---|
+| `mean_mech_power_w` | W | mean over physics steps of Σ_j \|τ_j · dq_j\| (applied torque) |
+| `torque_rms` | N·m | RMS over physics steps and joints of applied torque |
+
+## 6. Limit violations
+
+| key | unit | definition |
+|---|---|---|
+| `joint_limit_violation_rate` | 0–1 | fraction of control steps where at least one joint is outside its range in Unitree's model (+1 mrad tolerance; MuJoCo limits are soft so a joint can be pushed past them) |
+| `joint_limit_violation_count` | count | number of (step, joint) pairs outside range |
+| `near_joint_limit_rate` | 0–1 | fraction of (step, joint) pairs in the outer 5 % of the range (2.5 % at each end) |
+| `torque_saturation_rate` | 0–1 | fraction of physics steps where the **commanded** torque of at least one motor exceeded its limit (counted *before* clipping) |
+| `torque_saturation_count` | count | number of (physics step, joint) pairs that saturated |
+
+Torque limits per joint come from Unitree's model: hip pitch/yaw and waist yaw 88 N·m,
+hip roll and knee 139, ankles and waist roll/pitch 50, shoulders/elbows/wrist roll 25,
+wrist pitch/yaw 5.
+
+## 7. Bookkeeping (not for ranking)
+
+`episode_length_steps`, `sim_time_s`, `mean_policy_latency_ms` (wall-clock time of `act()`;
+depends on the machine, informational only).
+
+## How to compare two policies
+
+1. Same harness version (`summary.json → harness.harness_version`), same seeds, same command,
+   **same machine and environment** (see README, Reproducibility).
+2. Look at fall rate per scenario first. A policy that falls is not "smoother".
+3. Then tracking, then smoothness/effort/limits.
+4. With 3 seeds, differences smaller than ~2× the std are not meaningful. Use 5–10 seeds for final reports.

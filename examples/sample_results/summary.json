@@ -1,0 +1,2860 @@
+{
+  "created": "2026-11-13T17:00:45",
+  "harness": {
+    "model_xml": "C:\\Users\\davlat\\Desktop\\g1-eval-harness\\assets\\g1\\g1_29dof_harness.xml",
+    "physics_dt": 0.002,
+    "decimation": 10,
+    "gains_mode": "policy",
+    "spawn_clearance_m": 0.002,
+    "settle_time_s": 0.0,
+    "init_joint_noise_rad": 0.02,
+    "push_time_jitter_s": 0.3,
+    "push_dir_jitter_deg": 10.0,
+    "fall_min_base_height_m": 0.4,
+    "fall_max_tilt_rad": 1.047,
+    "allowed_ground_contact_bodies": [
+      "left_ankle_roll_link",
+      "right_ankle_roll_link"
+    ],
+    "tracking_warmup_s": 1.0,
+    "tracking_window_s": 1.0,
+    "soft_joint_limit_fraction": 0.95,
+    "video_width": 640,
+    "video_height": 480,
+    "video_stride": 2,
+    "control_dt": 0.02,
+    "harness_version": "1.0.0"
+  },
+  "robot": {
+    "nq": 36,
+    "nv": 35,
+    "nu": 29,
+    "total_mass_kg": 33.341142000000005,
+    "torque_limits": {
+      "left_hip_pitch_joint": 88.0,
+      "left_hip_roll_joint": 139.0,
+      "left_hip_yaw_joint": 88.0,
+      "left_knee_joint": 139.0,
+      "left_ankle_pitch_joint": 50.0,
+      "left_ankle_roll_joint": 50.0,
+      "right_hip_pitch_joint": 88.0,
+      "right_hip_roll_joint": 139.0,
+      "right_hip_yaw_joint": 88.0,
+      "right_knee_joint": 139.0,
+      "right_ankle_pitch_joint": 50.0,
+      "right_ankle_roll_joint": 50.0,
+      "waist_yaw_joint": 88.0,
+      "waist_roll_joint": 50.0,
+      "waist_pitch_joint": 50.0,
+      "left_shoulder_pitch_joint": 25.0,
+      "left_shoulder_roll_joint": 25.0,
+      "left_shoulder_yaw_joint": 25.0,
+      "left_elbow_joint": 25.0,
+      "left_wrist_roll_joint": 25.0,
+      "left_wrist_pitch_joint": 5.0,
+      "left_wrist_yaw_joint": 5.0,
+      "right_shoulder_pitch_joint": 25.0,
+      "right_shoulder_roll_joint": 25.0,
+      "right_shoulder_yaw_joint": 25.0,
+      "right_elbow_joint": 25.0,
+      "right_wrist_roll_joint": 25.0,
+      "right_wrist_pitch_joint": 5.0,
+      "right_wrist_yaw_joint": 5.0
+    }
+  },
+  "adapter": {
+    "name": "unitree_rl_gym_g1_motion",
+    "class": "adapters.unitree_rl_gym_adapter.UnitreeRLGymAdapter",
+    "checkpoint": "checkpoints/unitree_rl_gym_g1_motion.pt",
+    "checkpoint_sha256": "cf668f75b90d1abf",
+    "config": {},
+    "policy_dt": 0.02,
+    "command_rate": "control",
+    "uses_privileged_state": false,
+    "describe": {
+      "source": "unitreerobotics/unitree_rl_gym deploy/pre_train/g1/motion.pt",
+      "backend": "torch",
+      "recurrent": true,
+      "controlled_joints": [
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint"
+      ],
+      "obs_dim": 47,
+      "gait_period_s": 0.8,
+      "upper_body": "held at 0 with HOLD_GAINS"
+    }
+  },
+  "scenarios": {
+    "flat_nominal": {
+      "name": "flat_nominal",
+      "description": "Flat ground, nominal friction, no disturbances. Walk at the commanded velocity.",
+      "friction": 1.0,
+      "pushes": [],
+      "duration_s": 10.0,
+      "command_override": null
+    },
+    "stand_still": {
+      "name": "stand_still",
+      "description": "Zero velocity command. Checks drift and jitter while standing.",
+      "friction": 1.0,
+      "pushes": [],
+      "duration_s": 10.0,
+      "command_override": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "low_friction": {
+      "name": "low_friction",
+      "description": "Slippery floor (mu = 0.4, e.g. polished tiles).",
+      "friction": 0.4,
+      "pushes": [],
+      "duration_s": 10.0,
+      "command_override": null
+    },
+    "ice": {
+      "name": "ice",
+      "description": "Very slippery floor (mu = 0.2).",
+      "friction": 0.2,
+      "pushes": [],
+      "duration_s": 10.0,
+      "command_override": null
+    },
+    "push_lateral_medium": {
+      "name": "push_lateral_medium",
+      "description": "150 N sideways shove on the pelvis for 0.2 s (30 N*s) at t = 4 s.",
+      "friction": 1.0,
+      "pushes": [
+        {
+          "time_s": 4.0,
+          "force_xyz": [
+            0.0,
+            150.0,
+            0.0
+          ],
+          "duration_s": 0.2,
+          "impulse_ns": 30.0
+        }
+      ],
+      "duration_s": 10.0,
+      "command_override": null
+    },
+    "push_forward_hard": {
+      "name": "push_forward_hard",
+      "description": "250 N shove from behind for 0.2 s (50 N*s) at t = 4 s.",
+      "friction": 1.0,
+      "pushes": [
+        {
+          "time_s": 4.0,
+          "force_xyz": [
+            250.0,
+            0.0,
+            0.0
+          ],
+          "duration_s": 0.2,
+          "impulse_ns": 50.0
+        }
+      ],
+      "duration_s": 10.0,
+      "command_override": null
+    },
+    "push_backward_medium": {
+      "name": "push_backward_medium",
+      "description": "150 N shove from the front for 0.2 s (30 N*s) at t = 4 s.",
+      "friction": 1.0,
+      "pushes": [
+        {
+          "time_s": 4.0,
+          "force_xyz": [
+            -150.0,
+            0.0,
+            0.0
+          ],
+          "duration_s": 0.2,
+          "impulse_ns": 30.0
+        }
+      ],
+      "duration_s": 10.0,
+      "command_override": null
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "command": [
+    0.5,
+    0.0,
+    0.0
+  ],
+  "environment": {
+    "python": "3.10.11",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "mujoco": "3.15.0",
+    "numpy": "1.26.4"
+  },
+  "aggregates": {
+    "flat_nominal": {
+      "fall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "survival_fraction": {
+        "mean": 1.0,
+        "std": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.11397681615679256,
+        "std": 0.008822505970715233,
+        "min": 0.10731670149720042,
+        "max": 0.12644399950880006,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.030634981950624213,
+        "std": 0.003948796182840993,
+        "min": 0.025051456627594247,
+        "max": 0.03351432694906702,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.14866816420221163,
+        "std": 0.004675283475773632,
+        "min": 0.14526385634507086,
+        "max": 0.15527902767389212,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 0.9485650646307754,
+        "std": 0.03988748258978691,
+        "min": 0.8940757055287887,
+        "max": 0.9884469594413458,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.5946743188314448,
+        "std": 0.006480803460025866,
+        "min": 0.5899062503302015,
+        "max": 0.6038370227381874,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": 0.05175364849478017,
+        "std": 0.006898395583587325,
+        "min": 0.04654125470499673,
+        "max": 0.06150162427708194,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.925134139572381,
+        "std": 0.027384971407839517,
+        "min": 5.886771867042219,
+        "max": 5.948914952266675,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 97.1388636099504,
+        "std": 0.1873729082334256,
+        "min": 96.87396614525714,
+        "max": 97.27722081156516,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9576.477444898232,
+        "std": 15.232710747465045,
+        "min": 9554.939489601693,
+        "max": 9587.62135761708,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 160.7997563231626,
+        "std": 0.1870337668627941,
+        "min": 160.60907767482513,
+        "max": 161.05385233135274,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 9.509496155547696,
+        "std": 0.006714258530461401,
+        "min": 9.500017107117637,
+        "max": 9.51471799922765,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 500.0,
+        "std": 0.0,
+        "min": 500.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 10.000000000000009,
+        "std": 0.0,
+        "min": 10.000000000000009,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.32959446701958467,
+        "std": 0.050756400524944185,
+        "min": 0.29157300014048815,
+        "max": 0.40133180032717064,
+        "n": 3
+      }
+    },
+    "stand_still": {
+      "fall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "survival_fraction": {
+        "mean": 1.0,
+        "std": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.09472242049719383,
+        "std": 0.0002564702044962873,
+        "min": 0.0943817934623683,
+        "max": 0.09500064771184205,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.039406451013537694,
+        "std": 0.0002455313179498309,
+        "min": 0.03906507183517619,
+        "max": 0.039632128188382756,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.12778095568831974,
+        "std": 0.000295597714196786,
+        "min": 0.12737988572311396,
+        "max": 0.12808358952113616,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 1.0871489805823298,
+        "std": 0.0011492300329032038,
+        "min": 1.0855280438878785,
+        "max": 1.088062004656974,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.0924854739479453,
+        "std": 0.0004918669944579557,
+        "min": 0.09196041431373561,
+        "max": 0.09314314171026465,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": -0.009809561933571713,
+        "std": 0.0001831038336573591,
+        "min": -0.01004076610188356,
+        "max": -0.009592969774326932,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.592201504541577,
+        "std": 0.01854311736162704,
+        "min": 5.565979391681696,
+        "max": 5.605579768949291,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 91.01891413672718,
+        "std": 0.5424290051498863,
+        "min": 90.26178443746787,
+        "max": 91.50429566256645,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9023.614853413432,
+        "std": 54.74101360083021,
+        "min": 8947.14896464966,
+        "max": 9072.316500997924,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 118.74653604690404,
+        "std": 0.9911798083254534,
+        "min": 117.35506978573034,
+        "max": 119.58897415920454,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 8.56733769302539,
+        "std": 0.01986359201069377,
+        "min": 8.539589986253723,
+        "max": 8.58500522642358,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 500.0,
+        "std": 0.0,
+        "min": 500.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 10.000000000000009,
+        "std": 0.0,
+        "min": 10.000000000000009,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.31008493342475657,
+        "std": 0.025296710990454493,
+        "min": 0.29174280003644526,
+        "max": 0.34585599988349713,
+        "n": 3
+      }
+    },
+    "low_friction": {
+      "fall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "survival_fraction": {
+        "mean": 1.0,
+        "std": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.06503387377770299,
+        "std": 0.005591899778397937,
+        "min": 0.06105706548419753,
+        "max": 0.07294197061453686,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.04380702364357809,
+        "std": 0.00304850823282732,
+        "min": 0.039507854139212886,
+        "max": 0.04623582130372899,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.11594678681444033,
+        "std": 0.0035588645119080894,
+        "min": 0.11333283510426989,
+        "max": 0.12097850658875692,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 0.7248695779073637,
+        "std": 0.005480134316267727,
+        "min": 0.7186411213511134,
+        "max": 0.731977871142607,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.5430577981462451,
+        "std": 0.003357726157474112,
+        "min": 0.5396113352799635,
+        "max": 0.5476099706721599,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": 0.04004920060546724,
+        "std": 0.0036434558500894982,
+        "min": 0.03677907701413341,
+        "max": 0.04513272213997098,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.686018708328767,
+        "std": 0.05674410883168645,
+        "min": 5.631877887677558,
+        "max": 5.764386481988793,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 92.29923206969544,
+        "std": 0.964380932741002,
+        "min": 91.3265761845342,
+        "max": 93.6135100542155,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9067.240088934623,
+        "std": 99.28576031293878,
+        "min": 8966.985224898164,
+        "max": 9202.503970133863,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 153.2736997744072,
+        "std": 2.4987100954308334,
+        "min": 150.78747420611128,
+        "max": 156.6915171429012,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 9.382170565207625,
+        "std": 0.03163857704861222,
+        "min": 9.35882122247209,
+        "max": 9.42689981994677,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 500.0,
+        "std": 0.0,
+        "min": 500.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 10.000000000000009,
+        "std": 0.0,
+        "min": 10.000000000000009,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.3089886669282957,
+        "std": 0.03309116312599926,
+        "min": 0.279024000687059,
+        "max": 0.35510179988341406,
+        "n": 3
+      }
+    },
+    "ice": {
+      "fall": {
+        "mean": 1.0,
+        "std": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": 5.63333333333302,
+        "std": 2.144222210706806,
+        "min": 3.5399999999998317,
+        "max": 8.579999999999535,
+        "n": 3
+      },
+      "survival_fraction": {
+        "mean": 0.563333333333302,
+        "std": 0.21442222107068062,
+        "min": 0.35399999999998316,
+        "max": 0.8579999999999535,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.31263063405814506,
+        "std": 0.07057745413728451,
+        "min": 0.2624044286534703,
+        "max": 0.41244153971837616,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.2688149145564697,
+        "std": 0.03820992108502933,
+        "min": 0.2162353931127382,
+        "max": 0.3059001626479445,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.45855667341401224,
+        "std": 0.06245941994784054,
+        "min": 0.3706955067580383,
+        "max": 0.5103663592111536,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 1.1786455467204273,
+        "std": 0.0036450887547769006,
+        "min": 1.1753218486635049,
+        "max": 1.1837198408349094,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.6274777435782242,
+        "std": 0.03133567962561004,
+        "min": 0.5877505381073989,
+        "max": 0.6643472007616623,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": -0.2600223318210931,
+        "std": 0.07332959849479506,
+        "min": -0.3636796276718259,
+        "max": -0.2055069040764975,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 7.241534311886394,
+        "std": 0.14950342996554872,
+        "min": 7.036767076615311,
+        "max": 7.38952163416063,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 116.53833300423241,
+        "std": 2.3518092361547662,
+        "min": 113.54224902685469,
+        "max": 119.28702307502498,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 10418.578393677764,
+        "std": 290.2759294992994,
+        "min": 10008.707484630155,
+        "max": 10643.37716382077,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 346.83641407800457,
+        "std": 13.784173822282504,
+        "min": 331.201744577264,
+        "max": 364.73705206423494,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 12.717487708931236,
+        "std": 0.22369567284500133,
+        "min": 12.403267669724034,
+        "max": 12.90636180092544,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.05794251450587881,
+        "std": 0.0036346207921633448,
+        "min": 0.05439330543933055,
+        "max": 0.06293706293706294,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 17.0,
+        "std": 7.118052168020874,
+        "min": 11.0,
+        "max": 27.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0025349804969249912,
+        "std": 0.00016751448093228205,
+        "min": 0.002331002331002331,
+        "max": 0.0027413071706824414,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.11361938930196501,
+        "std": 0.01697177301307002,
+        "min": 0.08974358974358974,
+        "max": 0.12768361581920903,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 342.3333333333333,
+        "std": 66.95935749061184,
+        "min": 261.0,
+        "max": 425.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 281.6666666666667,
+        "std": 107.2111105353462,
+        "min": 177.0,
+        "max": 429.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 5.63333333333302,
+        "std": 2.144222210706806,
+        "min": 3.5399999999998317,
+        "max": 8.579999999999535,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.3090730548658076,
+        "std": 0.02681266589293188,
+        "min": 0.28887573287678125,
+        "max": 0.34696433568614293,
+        "n": 3
+      }
+    },
+    "push_lateral_medium": {
+      "fall": {
+        "mean": 0.3333333333333333,
+        "std": 0.4714045207910317,
+        "min": 0.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": 4.519999999999724,
+        "std": 0.0,
+        "min": 4.519999999999724,
+        "max": 4.519999999999724,
+        "n": 1
+      },
+      "survival_fraction": {
+        "mean": 0.8173333333333241,
+        "std": 0.2583296773934984,
+        "min": 0.4519999999999724,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.2503430978447742,
+        "std": 0.03238696933880163,
+        "min": 0.20898700208995094,
+        "max": 0.28806898084477933,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.08125904542806499,
+        "std": 0.029955545704066666,
+        "min": 0.043995855457409555,
+        "max": 0.11734323570895759,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.3555801788749462,
+        "std": 0.07272977863573932,
+        "min": 0.28878071504171904,
+        "max": 0.4567132465598541,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 0.9834440147334605,
+        "std": 0.08039959490831819,
+        "min": 0.8909033598581734,
+        "max": 1.086927213874701,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.5733672782342119,
+        "std": 0.03147024999864479,
+        "min": 0.5434209318474297,
+        "max": 0.6168532065738168,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": 0.1554671026197457,
+        "std": 0.03373964729670733,
+        "min": 0.12678605951831937,
+        "max": 0.2028317672255013,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.5891374768437325,
+        "std": 0.18730933144527842,
+        "min": 5.404828490756096,
+        "max": 5.846064014559049,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 92.97765689755109,
+        "std": 2.204726222124848,
+        "min": 90.12303398522987,
+        "max": 95.491049655054,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9084.101904463363,
+        "std": 208.94283719124073,
+        "min": 8824.225140013603,
+        "max": 9335.834023368874,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 159.7652900535882,
+        "std": 9.112681565225797,
+        "min": 149.11119898937775,
+        "max": 171.37160350961915,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 9.486090170625193,
+        "std": 0.2637354191723528,
+        "min": 9.2139123020409,
+        "max": 9.843027385143174,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.0364070796460177,
+        "std": 0.027457897724341818,
+        "min": 0.016,
+        "max": 0.0752212389380531,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 12.333333333333334,
+        "std": 4.714045207910316,
+        "min": 9.0,
+        "max": 19.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.001726375750178008,
+        "std": 0.00136861233164659,
+        "min": 0.0007586206896551724,
+        "max": 0.00366188587122368,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.0012,
+        "std": 0.0009092121131323903,
+        "min": 0.0,
+        "max": 0.0022,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 6.0,
+        "std": 4.546060565661952,
+        "min": 0.0,
+        "max": 11.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 408.6666666666667,
+        "std": 129.1648386967427,
+        "min": 226.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 8.173333333333247,
+        "std": 2.583296773934988,
+        "min": 4.519999999999724,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.31952605149032176,
+        "std": 0.027350387783231383,
+        "min": 0.2890603998966981,
+        "max": 0.35539740006788634,
+        "n": 3
+      }
+    },
+    "push_forward_hard": {
+      "fall": {
+        "mean": 0.3333333333333333,
+        "std": 0.4714045207910317,
+        "min": 0.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": 5.699999999999594,
+        "std": 0.0,
+        "min": 5.699999999999594,
+        "max": 5.699999999999594,
+        "n": 1
+      },
+      "survival_fraction": {
+        "mean": 0.8566666666666531,
+        "std": 0.20270394394016275,
+        "min": 0.5699999999999594,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.5832072656100201,
+        "std": 0.07869808990397748,
+        "min": 0.5005207195173764,
+        "max": 0.6890663146592206,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.15683147270951936,
+        "std": 0.05029614364610113,
+        "min": 0.08997486167014625,
+        "max": 0.2112882890835517,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.6469636122678613,
+        "std": 0.13186534010115492,
+        "min": 0.5311752917421494,
+        "max": 0.831457537547743,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 0.9273889456157609,
+        "std": 0.05223853179446818,
+        "min": 0.8722602376929568,
+        "max": 0.997543386195226,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.8753358537131936,
+        "std": 0.0877722859654783,
+        "min": 0.7805495655082871,
+        "max": 0.9921381539239071,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": -0.0185725190198858,
+        "std": 0.016689357794591783,
+        "min": -0.03780695653038937,
+        "max": 0.0028907668310206545,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.953912543194279,
+        "std": 0.09033862825979426,
+        "min": 5.8297435220681315,
+        "max": 6.042038218827732,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 95.62545507906547,
+        "std": 1.7610821154077985,
+        "min": 93.15194173737274,
+        "max": 97.1140333875144,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9074.537732979255,
+        "std": 141.26640495629383,
+        "min": 8959.64949372228,
+        "max": 9273.52624534104,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 202.50147906237535,
+        "std": 13.08689501353563,
+        "min": 185.21028387155084,
+        "max": 216.86207082205067,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 10.629669933158516,
+        "std": 0.2932772154816532,
+        "min": 10.24267618681942,
+        "max": 10.95237271912555,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.02639766081871345,
+        "std": 0.03592699565495968,
+        "min": 0.0,
+        "max": 0.07719298245614035,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 8.0,
+        "std": 10.614455552060438,
+        "min": 0.0,
+        "max": 23.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0018261746319822546,
+        "std": 0.002390191666480271,
+        "min": 0.0,
+        "max": 0.005202661826981246,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.048766081871345034,
+        "std": 0.009746276377062381,
+        "min": 0.0358,
+        "max": 0.059298245614035086,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 205.0,
+        "std": 43.289721643826724,
+        "min": 170.0,
+        "max": 266.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 428.3333333333333,
+        "std": 101.3519719700718,
+        "min": 285.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 8.566666666666537,
+        "std": 2.027039439401632,
+        "min": 5.699999999999594,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.3076237591307907,
+        "std": 0.031156236902877263,
+        "min": 0.2790604002366308,
+        "max": 0.3509600000688806,
+        "n": 3
+      }
+    },
+    "push_backward_medium": {
+      "fall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "time_to_fall_s": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "survival_fraction": {
+        "mean": 1.0,
+        "std": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "n": 3
+      },
+      "lin_vel_xy_rmse": {
+        "mean": 0.1737938718046966,
+        "std": 0.030097620753226785,
+        "min": 0.14739915258514644,
+        "max": 0.21590989771322125,
+        "n": 3
+      },
+      "yaw_rate_rmse": {
+        "mean": 0.03581939628211118,
+        "std": 0.0023901585327996094,
+        "min": 0.033580285153369985,
+        "max": 0.03913191165749808,
+        "n": 3
+      },
+      "lin_vel_xy_rmse_instant": {
+        "mean": 0.2201673485655551,
+        "std": 0.028533563334790565,
+        "min": 0.19848172478958792,
+        "max": 0.2604812759050475,
+        "n": 3
+      },
+      "yaw_rate_rmse_instant": {
+        "mean": 0.9656245312087167,
+        "std": 0.037319805406552865,
+        "min": 0.914046102158844,
+        "max": 1.0011040014544732,
+        "n": 3
+      },
+      "mean_forward_vel": {
+        "mean": 0.5042838038919963,
+        "std": 0.017620832957666015,
+        "min": 0.4804490285855713,
+        "max": 0.5224994647809559,
+        "n": 3
+      },
+      "mean_lateral_vel": {
+        "mean": 0.028252604866443997,
+        "std": 0.007417898934354813,
+        "min": 0.01821776760952626,
+        "max": 0.035918488677010266,
+        "n": 3
+      },
+      "joint_pos_tracking_rmse": {
+        "mean": null,
+        "std": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "action_rate_rms": {
+        "mean": 5.578616544180811,
+        "std": 0.015315561604250426,
+        "min": 5.557235844995446,
+        "max": 5.592306713374585,
+        "n": 3
+      },
+      "joint_acc_rms": {
+        "mean": 92.51735223948236,
+        "std": 0.3859998397563229,
+        "min": 91.97758401182466,
+        "max": 92.85781616449192,
+        "n": 3
+      },
+      "joint_jerk_rms": {
+        "mean": 9113.991742977692,
+        "std": 41.48914542280203,
+        "min": 9055.367822520937,
+        "max": 9145.413381992408,
+        "n": 3
+      },
+      "mean_mech_power_w": {
+        "mean": 146.0208613451879,
+        "std": 1.30355587016446,
+        "min": 144.40513443294697,
+        "max": 147.59746192722048,
+        "n": 3
+      },
+      "torque_rms": {
+        "mean": 9.223353233817212,
+        "std": 0.04510630130653706,
+        "min": 9.174327724367924,
+        "max": 9.283210608977821,
+        "n": 3
+      },
+      "joint_limit_violation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "joint_limit_violation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "near_joint_limit_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "torque_saturation_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      },
+      "episode_length_steps": {
+        "mean": 500.0,
+        "std": 0.0,
+        "min": 500.0,
+        "max": 500.0,
+        "n": 3
+      },
+      "sim_time_s": {
+        "mean": 10.000000000000009,
+        "std": 0.0,
+        "min": 10.000000000000009,
+        "max": 10.000000000000009,
+        "n": 3
+      },
+      "mean_policy_latency_ms": {
+        "mean": 0.3129115335662694,
+        "std": 0.033783878329314544,
+        "min": 0.2823786000662949,
+        "max": 0.36000300041632727,
+        "n": 3
+      }
+    }
+  },
+  "trials": {
+    "flat_nominal": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.10731670149720042,
+        "yaw_rate_rmse": 0.033339162275211366,
+        "lin_vel_xy_rmse_instant": 0.14526385634507086,
+        "yaw_rate_rmse_instant": 0.9884469594413458,
+        "mean_forward_vel": 0.5899062503302015,
+        "mean_lateral_vel": 0.04721806650226183,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.93971559940825,
+        "joint_acc_rms": 97.27722081156516,
+        "joint_jerk_rms": 9587.62135761708,
+        "mean_mech_power_w": 160.60907767482513,
+        "torque_rms": 9.500017107117637,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.40133180032717064
+      },
+      "seed_1": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.10816974746437719,
+        "yaw_rate_rmse": 0.03351432694906702,
+        "lin_vel_xy_rmse_instant": 0.14546160858767193,
+        "yaw_rate_rmse_instant": 0.9631725289221916,
+        "mean_forward_vel": 0.5902796834259458,
+        "mean_lateral_vel": 0.04654125470499673,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.948914952266675,
+        "joint_acc_rms": 97.26540387302889,
+        "joint_jerk_rms": 9586.87148747592,
+        "mean_mech_power_w": 161.05385233135274,
+        "torque_rms": 9.513753360297805,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.29157300014048815
+      },
+      "seed_2": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.12644399950880006,
+        "yaw_rate_rmse": 0.025051456627594247,
+        "lin_vel_xy_rmse_instant": 0.15527902767389212,
+        "yaw_rate_rmse_instant": 0.8940757055287887,
+        "mean_forward_vel": 0.6038370227381874,
+        "mean_lateral_vel": 0.06150162427708194,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.886771867042219,
+        "joint_acc_rms": 96.87396614525714,
+        "joint_jerk_rms": 9554.939489601693,
+        "mean_mech_power_w": 160.7363389633099,
+        "torque_rms": 9.51471799922765,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.29587860059109516
+      }
+    },
+    "stand_still": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.09500064771184205,
+        "yaw_rate_rmse": 0.03906507183517619,
+        "lin_vel_xy_rmse_instant": 0.12808358952113616,
+        "yaw_rate_rmse_instant": 1.0878568932021364,
+        "mean_forward_vel": 0.09235286581983562,
+        "mean_lateral_vel": -0.01004076610188356,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.565979391681696,
+        "joint_acc_rms": 90.26178443746787,
+        "joint_jerk_rms": 8947.14896464966,
+        "mean_mech_power_w": 117.35506978573034,
+        "torque_rms": 8.539589986253723,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.34585599988349713
+      },
+      "seed_1": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.0943817934623683,
+        "yaw_rate_rmse": 0.03952215301705414,
+        "lin_vel_xy_rmse_instant": 0.12737988572311396,
+        "yaw_rate_rmse_instant": 1.088062004656974,
+        "mean_forward_vel": 0.09196041431373561,
+        "mean_lateral_vel": -0.009794949924504645,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.605045352993742,
+        "joint_acc_rms": 91.29066231014723,
+        "joint_jerk_rms": 9051.37909459271,
+        "mean_mech_power_w": 119.2955641957772,
+        "torque_rms": 8.577417866398868,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.29174280003644526
+      },
+      "seed_2": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.09478482031737116,
+        "yaw_rate_rmse": 0.039632128188382756,
+        "lin_vel_xy_rmse_instant": 0.12787939182070907,
+        "yaw_rate_rmse_instant": 1.0855280438878785,
+        "mean_forward_vel": 0.09314314171026465,
+        "mean_lateral_vel": -0.009592969774326932,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.605579768949291,
+        "joint_acc_rms": 91.50429566256645,
+        "joint_jerk_rms": 9072.316500997924,
+        "mean_mech_power_w": 119.58897415920454,
+        "torque_rms": 8.58500522642358,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.29265600035432726
+      }
+    },
+    "low_friction": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.07294197061453686,
+        "yaw_rate_rmse": 0.039507854139212886,
+        "lin_vel_xy_rmse_instant": 0.12097850658875692,
+        "yaw_rate_rmse_instant": 0.7186411213511134,
+        "mean_forward_vel": 0.5476099706721599,
+        "mean_lateral_vel": 0.04513272213997098,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.764386481988793,
+        "joint_acc_rms": 93.6135100542155,
+        "joint_jerk_rms": 9202.503970133863,
+        "mean_mech_power_w": 156.6915171429012,
+        "torque_rms": 9.42689981994677,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.35510179988341406
+      },
+      "seed_1": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.06105706548419753,
+        "yaw_rate_rmse": 0.04623582130372899,
+        "lin_vel_xy_rmse_instant": 0.11352901875029421,
+        "yaw_rate_rmse_instant": 0.7239897412283708,
+        "mean_forward_vel": 0.5396113352799635,
+        "mean_lateral_vel": 0.03677907701413341,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.66179175531995,
+        "joint_acc_rms": 91.95760997033662,
+        "joint_jerk_rms": 9032.23107177184,
+        "mean_mech_power_w": 152.34210797420914,
+        "torque_rms": 9.360790653204017,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.2928402002144139
+      },
+      "seed_2": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.061102585234374604,
+        "yaw_rate_rmse": 0.04567739548779239,
+        "lin_vel_xy_rmse_instant": 0.11333283510426989,
+        "yaw_rate_rmse_instant": 0.731977871142607,
+        "mean_forward_vel": 0.5419520884866118,
+        "mean_lateral_vel": 0.038235802662297334,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.631877887677558,
+        "joint_acc_rms": 91.3265761845342,
+        "joint_jerk_rms": 8966.985224898164,
+        "mean_mech_power_w": 150.78747420611128,
+        "torque_rms": 9.35882122247209,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.279024000687059
+      }
+    },
+    "ice": {
+      "seed_0": {
+        "fall": true,
+        "fall_reason": "base_tilt",
+        "time_to_fall_s": 8.579999999999535,
+        "survival_fraction": 0.8579999999999535,
+        "lin_vel_xy_rmse": 0.2630459338025888,
+        "yaw_rate_rmse": 0.2162353931127382,
+        "lin_vel_xy_rmse_instant": 0.3706955067580383,
+        "yaw_rate_rmse_instant": 1.1753218486635049,
+        "mean_forward_vel": 0.6303354918656116,
+        "mean_lateral_vel": -0.2055069040764975,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 7.38952163416063,
+        "joint_acc_rms": 116.78572691081756,
+        "joint_jerk_rms": 10603.650532582367,
+        "mean_mech_power_w": 331.201744577264,
+        "torque_rms": 12.842833656144231,
+        "joint_limit_violation_rate": 0.06293706293706294,
+        "joint_limit_violation_count": 27,
+        "near_joint_limit_rate": 0.002331002331002331,
+        "torque_saturation_rate": 0.08974358974358974,
+        "torque_saturation_count": 425,
+        "episode_length_steps": 429,
+        "sim_time_s": 8.579999999999535,
+        "mean_policy_latency_ms": 0.34696433568614293
+      },
+      "seed_1": {
+        "fall": true,
+        "fall_reason": "base_tilt",
+        "time_to_fall_s": 4.779999999999696,
+        "survival_fraction": 0.47799999999996956,
+        "lin_vel_xy_rmse": 0.41244153971837616,
+        "yaw_rate_rmse": 0.2843091879087264,
+        "lin_vel_xy_rmse_instant": 0.5103663592111536,
+        "yaw_rate_rmse_instant": 1.1837198408349094,
+        "mean_forward_vel": 0.5877505381073989,
+        "mean_lateral_vel": -0.3636796276718259,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 7.29831422488324,
+        "joint_acc_rms": 119.28702307502498,
+        "joint_jerk_rms": 10643.37716382077,
+        "mean_mech_power_w": 364.73705206423494,
+        "torque_rms": 12.90636180092544,
+        "joint_limit_violation_rate": 0.05439330543933055,
+        "joint_limit_violation_count": 13,
+        "near_joint_limit_rate": 0.0027413071706824414,
+        "torque_saturation_rate": 0.12343096234309624,
+        "torque_saturation_count": 341,
+        "episode_length_steps": 239,
+        "sim_time_s": 4.779999999999696,
+        "mean_policy_latency_ms": 0.28887573287678125
+      },
+      "seed_2": {
+        "fall": true,
+        "fall_reason": "base_tilt",
+        "time_to_fall_s": 3.5399999999998317,
+        "survival_fraction": 0.35399999999998316,
+        "lin_vel_xy_rmse": 0.2624044286534703,
+        "yaw_rate_rmse": 0.3059001626479445,
+        "lin_vel_xy_rmse_instant": 0.49460815427284477,
+        "yaw_rate_rmse_instant": 1.1768949506628672,
+        "mean_forward_vel": 0.6643472007616623,
+        "mean_lateral_vel": -0.21088046371495592,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 7.036767076615311,
+        "joint_acc_rms": 113.54224902685469,
+        "joint_jerk_rms": 10008.707484630155,
+        "mean_mech_power_w": 344.5704455925148,
+        "torque_rms": 12.403267669724034,
+        "joint_limit_violation_rate": 0.05649717514124294,
+        "joint_limit_violation_count": 11,
+        "near_joint_limit_rate": 0.002532631989090201,
+        "torque_saturation_rate": 0.12768361581920903,
+        "torque_saturation_count": 261,
+        "episode_length_steps": 177,
+        "sim_time_s": 3.5399999999998317,
+        "mean_policy_latency_ms": 0.2913790960344986
+      }
+    },
+    "push_lateral_medium": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.28806898084477933,
+        "yaw_rate_rmse": 0.11734323570895759,
+        "lin_vel_xy_rmse_instant": 0.32124657502326553,
+        "yaw_rate_rmse_instant": 0.8909033598581734,
+        "mean_forward_vel": 0.6168532065738168,
+        "mean_lateral_vel": 0.13678348111541636,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.846064014559049,
+        "joint_acc_rms": 95.491049655054,
+        "joint_jerk_rms": 9335.834023368874,
+        "mean_mech_power_w": 171.37160350961915,
+        "torque_rms": 9.843027385143174,
+        "joint_limit_violation_rate": 0.018,
+        "joint_limit_violation_count": 9,
+        "near_joint_limit_rate": 0.0007586206896551724,
+        "torque_saturation_rate": 0.0014,
+        "torque_saturation_count": 7,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.35539740006788634
+      },
+      "seed_1": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.2539733105995923,
+        "yaw_rate_rmse": 0.08243804511782782,
+        "lin_vel_xy_rmse_instant": 0.28878071504171904,
+        "yaw_rate_rmse_instant": 0.9725014704675075,
+        "mean_forward_vel": 0.5434209318474297,
+        "mean_lateral_vel": 0.12678605951831937,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.404828490756096,
+        "joint_acc_rms": 90.12303398522987,
+        "joint_jerk_rms": 8824.225140013603,
+        "mean_mech_power_w": 149.11119898937775,
+        "torque_rms": 9.401330824691508,
+        "joint_limit_violation_rate": 0.016,
+        "joint_limit_violation_count": 9,
+        "near_joint_limit_rate": 0.0007586206896551724,
+        "torque_saturation_rate": 0.0022,
+        "torque_saturation_count": 11,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.2890603998966981
+      },
+      "seed_2": {
+        "fall": true,
+        "fall_reason": "base_tilt",
+        "time_to_fall_s": 4.519999999999724,
+        "survival_fraction": 0.4519999999999724,
+        "lin_vel_xy_rmse": 0.20898700208995094,
+        "yaw_rate_rmse": 0.043995855457409555,
+        "lin_vel_xy_rmse_instant": 0.4567132465598541,
+        "yaw_rate_rmse_instant": 1.086927213874701,
+        "mean_forward_vel": 0.559827696281389,
+        "mean_lateral_vel": 0.2028317672255013,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.516519925216051,
+        "joint_acc_rms": 93.3188870523694,
+        "joint_jerk_rms": 9092.246550007614,
+        "mean_mech_power_w": 158.81306766176772,
+        "torque_rms": 9.2139123020409,
+        "joint_limit_violation_rate": 0.0752212389380531,
+        "joint_limit_violation_count": 19,
+        "near_joint_limit_rate": 0.00366188587122368,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 226,
+        "sim_time_s": 4.519999999999724,
+        "mean_policy_latency_ms": 0.3141203545063808
+      }
+    },
+    "push_forward_hard": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.5005207195173764,
+        "yaw_rate_rmse": 0.16923126737486013,
+        "lin_vel_xy_rmse_instant": 0.5311752917421494,
+        "yaw_rate_rmse_instant": 0.9123632129590998,
+        "mean_forward_vel": 0.7805495655082871,
+        "mean_lateral_vel": -0.03780695653038937,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.8297435220681315,
+        "joint_acc_rms": 93.15194173737274,
+        "joint_jerk_rms": 8990.43745987445,
+        "mean_mech_power_w": 185.21028387155084,
+        "torque_rms": 10.24267618681942,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0358,
+        "torque_saturation_count": 179,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.3509600000688806
+      },
+      "seed_1": {
+        "fall": true,
+        "fall_reason": "base_tilt",
+        "time_to_fall_s": 5.699999999999594,
+        "survival_fraction": 0.5699999999999594,
+        "lin_vel_xy_rmse": 0.6890663146592206,
+        "yaw_rate_rmse": 0.2112882890835517,
+        "lin_vel_xy_rmse_instant": 0.831457537547743,
+        "yaw_rate_rmse_instant": 0.997543386195226,
+        "mean_forward_vel": 0.9921381539239071,
+        "mean_lateral_vel": 0.0028907668310206545,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.989955888686973,
+        "joint_acc_rms": 97.1140333875144,
+        "joint_jerk_rms": 8959.64949372228,
+        "mean_mech_power_w": 216.86207082205067,
+        "torque_rms": 10.95237271912555,
+        "joint_limit_violation_rate": 0.07719298245614035,
+        "joint_limit_violation_count": 23,
+        "near_joint_limit_rate": 0.005202661826981246,
+        "torque_saturation_rate": 0.059298245614035086,
+        "torque_saturation_count": 170,
+        "episode_length_steps": 285,
+        "sim_time_s": 5.699999999999594,
+        "mean_policy_latency_ms": 0.2928508770868607
+      },
+      "seed_2": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.5600347626534633,
+        "yaw_rate_rmse": 0.08997486167014625,
+        "lin_vel_xy_rmse_instant": 0.5782580075136915,
+        "yaw_rate_rmse_instant": 0.8722602376929568,
+        "mean_forward_vel": 0.8533198417073863,
+        "mean_lateral_vel": -0.020801367360288685,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 6.042038218827732,
+        "joint_acc_rms": 96.61039011230929,
+        "joint_jerk_rms": 9273.52624534104,
+        "mean_mech_power_w": 205.43208249352463,
+        "torque_rms": 10.693960893530575,
+        "joint_limit_violation_rate": 0.002,
+        "joint_limit_violation_count": 1,
+        "near_joint_limit_rate": 0.00027586206896551725,
+        "torque_saturation_rate": 0.0512,
+        "torque_saturation_count": 266,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.2790604002366308
+      }
+    },
+    "push_backward_medium": {
+      "seed_0": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.15807256511572215,
+        "yaw_rate_rmse": 0.033580285153369985,
+        "lin_vel_xy_rmse_instant": 0.20153904500202985,
+        "yaw_rate_rmse_instant": 1.0011040014544732,
+        "mean_forward_vel": 0.5099029183094618,
+        "mean_lateral_vel": 0.03062155831279546,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.557235844995446,
+        "joint_acc_rms": 92.71665654213052,
+        "joint_jerk_rms": 9141.194024419736,
+        "mean_mech_power_w": 144.40513443294697,
+        "torque_rms": 9.174327724367924,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.36000300041632727
+      },
+      "seed_1": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.14739915258514644,
+        "yaw_rate_rmse": 0.03913191165749808,
+        "lin_vel_xy_rmse_instant": 0.19848172478958792,
+        "yaw_rate_rmse_instant": 0.914046102158844,
+        "mean_forward_vel": 0.5224994647809559,
+        "mean_lateral_vel": 0.01821776760952626,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.592306713374585,
+        "joint_acc_rms": 91.97758401182466,
+        "joint_jerk_rms": 9055.367822520937,
+        "mean_mech_power_w": 146.0599876753963,
+        "torque_rms": 9.21252136810589,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.29635300021618605
+      },
+      "seed_2": {
+        "fall": false,
+        "fall_reason": "",
+        "time_to_fall_s": null,
+        "survival_fraction": 1.0,
+        "lin_vel_xy_rmse": 0.21590989771322125,
+        "yaw_rate_rmse": 0.03474599203546547,
+        "lin_vel_xy_rmse_instant": 0.2604812759050475,
+        "yaw_rate_rmse_instant": 0.9817234900128332,
+        "mean_forward_vel": 0.4804490285855713,
+        "mean_lateral_vel": 0.035918488677010266,
+        "joint_pos_tracking_rmse": null,
+        "action_rate_rms": 5.586307074172402,
+        "joint_acc_rms": 92.85781616449192,
+        "joint_jerk_rms": 9145.413381992408,
+        "mean_mech_power_w": 147.59746192722048,
+        "torque_rms": 9.283210608977821,
+        "joint_limit_violation_rate": 0.0,
+        "joint_limit_violation_count": 0,
+        "near_joint_limit_rate": 0.0,
+        "torque_saturation_rate": 0.0,
+        "torque_saturation_count": 0,
+        "episode_length_steps": 500,
+        "sim_time_s": 10.000000000000009,
+        "mean_policy_latency_ms": 0.2823786000662949
+      }
+    }
+  },
+  "perturbations": {
+    "flat_nominal": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.005478467492858172,
+          -0.009208531449445188,
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.0004728649880102673,
+          0.01801854785303741,
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          -0.009535514630027345,
+          -0.008060354263435068,
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478
+        ]
+      }
+    },
+    "stand_still": {
+      "seed_0": {
+        "command": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.005478467492858172,
+          -0.009208531449445188,
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.0004728649880102673,
+          0.01801854785303741,
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [],
+        "initial_joint_noise": [
+          -0.009535514630027345,
+          -0.008060354263435068,
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478
+        ]
+      }
+    },
+    "low_friction": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.4,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.005478467492858172,
+          -0.009208531449445188,
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.4,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.0004728649880102673,
+          0.01801854785303741,
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.4,
+        "pushes": [],
+        "initial_joint_noise": [
+          -0.009535514630027345,
+          -0.008060354263435068,
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478
+        ]
+      }
+    },
+    "ice": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.2,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.005478467492858172,
+          -0.009208531449445188,
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.2,
+        "pushes": [],
+        "initial_joint_noise": [
+          0.0004728649880102673,
+          0.01801854785303741,
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 0.2,
+        "pushes": [],
+        "initial_joint_noise": [
+          -0.009535514630027345,
+          -0.008060354263435068,
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478
+        ]
+      }
+    },
+    "push_lateral_medium": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.082177012392872,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              12.040970284857458,
+              149.51593572124403,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885,
+          0.006018371050712651,
+          0.007537869222837602
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.007092974820154,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              -23.48914961560202,
+              148.14945106322824,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926,
+          0.018797016528645304,
+          0.0006427434219151498
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 3.85696728054959,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              10.542280704101907,
+              149.62907577591972,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478,
+          -0.015818257662682342,
+          -0.011923702098821987
+        ]
+      }
+    },
+    "push_forward_hard": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.082177012392872,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              249.1932262020734,
+              -20.068283808095764,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885,
+          0.006018371050712651,
+          0.007537869222837602
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.007092974820154,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              246.9157517720471,
+              39.14858269267003,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926,
+          0.018797016528645304,
+          0.0006427434219151498
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 3.85696728054959,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              249.38179295986617,
+              -17.570467840169847,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478,
+          -0.015818257662682342,
+          -0.011923702098821987
+        ]
+      }
+    },
+    "push_backward_medium": {
+      "seed_0": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.082177012392872,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              -149.51593572124403,
+              12.040970284857458,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.018361059042552214,
+          -0.019338894578858838,
+          0.012530809568010896,
+          0.01651022309110887,
+          0.004265431030687196,
+          0.009179862439359938,
+          0.001744999658616915,
+          0.01740289695151073,
+          0.012634142164861289,
+          -0.01989045999319408,
+          0.014296171063502772,
+          -0.018656576987781427,
+          0.009186217857197764,
+          -0.01297377517589764,
+          0.014527156893995464,
+          0.001658448809963669,
+          -0.008011524378504609,
+          -0.0030925111520936632,
+          -0.01886721315418148,
+          -0.015028668940017443,
+          0.006824976587745214,
+          0.0058875804629700025,
+          0.004615404459250155,
+          -0.004652897829524662,
+          0.01988839743156844,
+          0.0192334135510492,
+          0.0074216793792277885,
+          0.006018371050712651,
+          0.007537869222837602
+        ]
+      },
+      "seed_1": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 4.007092974820154,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              -148.14945106322824,
+              -23.48914961560202,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          -0.01423361549121465,
+          0.017945977885489756,
+          -0.007526741919580582,
+          -0.0030669420410969726,
+          0.013108103752817669,
+          -0.0036320345452335485,
+          0.00198374750692238,
+          -0.018897635470277264,
+          0.010140524346992263,
+          0.0015257325287711294,
+          -0.006810731340036314,
+          0.011537148137136171,
+          -0.007872206828334201,
+          -0.0018600844207739414,
+          -0.01463833211011341,
+          -0.0038754805421148293,
+          -0.011861790372954015,
+          -0.00950746638232602,
+          0.010014586905202103,
+          -0.008783649680558404,
+          -0.0005923610227345985,
+          0.019229487992049547,
+          0.018466287746551468,
+          0.008991597630941345,
+          0.001649074221897369,
+          -0.008924351838185168,
+          -0.013573919648994926,
+          0.018797016528645304,
+          0.0006427434219151498
+        ]
+      },
+      "seed_2": {
+        "command": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "friction": 1.0,
+        "pushes": [
+          {
+            "start_s": 3.85696728054959,
+            "duration_s": 0.20000000000000018,
+            "force_xyz": [
+              -149.62907577591972,
+              10.542280704101907,
+              0.0
+            ]
+          }
+        ],
+        "initial_joint_noise": [
+          0.012569029623771214,
+          -0.016323362314596124,
+          0.004004021038626161,
+          0.009142421072471783,
+          -0.012483957065335862,
+          -0.01779413490667727,
+          -0.009001225283758477,
+          0.0062973205950237025,
+          0.00249062651121712,
+          -0.013997509467786554,
+          -0.002694768367808513,
+          0.00677189194298081,
+          -0.0030886130691948864,
+          0.005327375970964655,
+          0.018697438099747065,
+          0.007322592892385012,
+          -0.004335006676798953,
+          -0.012509897211196077,
+          -0.006161573377130676,
+          0.0004426389427830829,
+          0.015648376380023168,
+          0.01102255769890758,
+          -0.0072741359753850255,
+          0.016968675860272963,
+          -0.0011636045833696984,
+          0.007750353688089202,
+          -0.015711707661856478,
+          -0.015818257662682342,
+          -0.011923702098821987
+        ]
+      }
+    }
+  },
+  "wall_time_s": 29.7
+}
