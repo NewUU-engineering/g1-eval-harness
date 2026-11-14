@@ -58,9 +58,10 @@ reading. Both are one flag apart; the choice is recorded in `summary.json`.
 
 ## 5. Fairness and reproducibility details
 
-- **Robot model**: Unitree's own `g1_29dof_rev_1_0.xml`; the only change (joint armature /
-  damping / friction loss, matching unitree_rl_gym's sim2sim model) is applied by a script, so
-  the difference from upstream is auditable.
+- **Robot model** (v2.0.0): default `ros2`, the ROS 2 deployment stack's G1 (per-joint motor
+  armature, capsule collisions), as used by BeyondMimic's sim2sim; `unitree_rl_gym` is the v1 model
+  (Unitree's `g1_29dof_rev_1_0.xml` plus one armature for all joints, from unitree_rl_gym's 12-DoF
+  sim2sim). Both are built from an unmodified upstream copy by a script, so changes are auditable.
 - **Name-based indexing everywhere** (`harness/robot.py`): a wrong model or joint order fails at
   start-up instead of silently scrambling joints.
 - **Seeds**: per-trial `numpy.random.default_rng(seed)` draws initial joint noise, push time and

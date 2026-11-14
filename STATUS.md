@@ -15,7 +15,9 @@
 | **v1.1.0:** BeyondMimic adapter (mjlab ONNX export) | `adapters/beyondmimic_adapter.py` | done, checked against mjlab's evaluation on the LAFAN1 demo dance |
 | **v1.1.0:** SONIC adapter (ViT-H `g1_tracker`, 1570-D deploy policy) | `adapters/sonic_adapter.py` | done, checked against `g1_tracker` on a tennis serve |
 
-Reference results: `examples/sample_results/` (summary, per-trial logs, videos).
+| **v2.0.0:** robot-model choice, default `ros2` (ROS 2 stack's G1) | `assets/g1/build_ros2_model.py`, `--robot` | done; `--robot unitree_rl_gym` reproduces v1.0.0 |
+
+Reference results: `examples/sample_results/` (summary, per-trial logs, videos; v1 robot model).
 What was wrong with the first version and what changed: `FIXES.md`.
 
 ## Open items
@@ -49,6 +51,11 @@ What was wrong with the first version and what changed: `FIXES.md`.
 7. **Starting state of motion trackers (v1.1.0).** The robot starts at rest on the reference's first
    frame (plus the seeded joint noise). mjlab and `g1_tracker` also start it with the reference
    velocities, which matters for motions that begin while moving.
+
+8. **Default robot model (v2.0.0) - open decision.** Results change with the model: on
+   `ros2` the example walking policy tracks speed better (0.03 vs 0.11 m/s) and survives ice, but
+   falls more under a sideways push; BeyondMimic finishes the LAFAN1 cartwheel only on `ros2`.
+   `examples/sample_results/` are still v1 numbers.
 
 ## Possible extensions
 
