@@ -9,11 +9,17 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Tuple
 import os
 
-HARNESS_VERSION = "1.1.0"
+HARNESS_VERSION = "2.0.0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(_HERE)
-DEFAULT_MODEL_XML = os.path.join(REPO_ROOT, "assets", "g1", "g1_29dof_harness.xml")
+# robot models (assets/g1/build_*_model.py); ros2 = the ROS 2 deployment stack's G1
+ROBOT_MODELS = {
+    "ros2": os.path.join(REPO_ROOT, "assets", "g1", "g1_29dof_ros2.xml"),
+    "unitree_rl_gym": os.path.join(REPO_ROOT, "assets", "g1", "g1_29dof_harness.xml"),
+}
+DEFAULT_ROBOT = "ros2"
+DEFAULT_MODEL_XML = ROBOT_MODELS[DEFAULT_ROBOT]
 
 
 # Reference PD gains for the G1 (by joint name). Only used when the harness is

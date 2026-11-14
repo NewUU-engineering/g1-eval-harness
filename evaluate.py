@@ -27,7 +27,7 @@ sys.path.insert(0, REPO_ROOT)
 
 import numpy as np  # noqa: E402
 
-from harness.config import HarnessConfig, HARNESS_VERSION  # noqa: E402
+from harness.config import DEFAULT_ROBOT, HARNESS_VERSION, ROBOT_MODELS, HarnessConfig  # noqa: E402
 from harness.engine import SimulationEngine  # noqa: E402
 from harness.metrics import aggregate  # noqa: E402
 from harness.reporting import save_trial_log, save_video, write_summary, markdown_table  # noqa: E402
@@ -97,6 +97,8 @@ def main():
     ap.add_argument("--scenarios", nargs="+", default=DEFAULT_SCENARIOS, help=f"default: all ({', '.join(DEFAULT_SCENARIOS)})")
     ap.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     ap.add_argument("--cmd-vel", nargs=3, type=float, default=[0.5, 0.0, 0.0], metavar=("VX", "VY", "YAW_RATE"))
+    ap.add_argument("--robot", choices=sorted(ROBOT_MODELS), default=DEFAULT_ROBOT,
+                    help="robot model: ros2 (default) or unitree_rl_gym (v1 model)")
     ap.add_argument("--gains", choices=["policy", "harness"], default="policy",
                     help="policy: each policy sends its own kp/kd (like on hardware). harness: force G1 reference gains.")
     ap.add_argument("--output-dir", default=None, help="default: results/<adapter>_<timestamp>")
@@ -114,7 +116,7 @@ def main():
     if unknown:
         ap.error(f"Unknown scenarios {unknown}. Use --list-scenarios.")
 
-    cfg = HarnessConfig(gains_mode=args.gains)
+    cfg = HarnessConfig(gains_mode=args.gains, model_xml=ROBOT_MODELS[args.robot])
     adapter_cls = load_adapter_class(args.adapter)
     adapter = adapter_cls(checkpoint_path=args.checkpoint,
                           config=load_adapter_config(args.adapter_config, args.set))
@@ -131,6 +133,7 @@ def main():
 
     print(f"\n[HARNESS {HARNESS_VERSION}] policy={name}  scenarios={len(args.scenarios)}  seeds={args.seeds}")
     print(f"  physics {1/cfg.physics_dt:.0f} Hz | control {1/cfg.control_dt:.0f} Hz | gains: {cfg.gains_mode} | cmd {command.tolist()}")
+    print(f"  robot model: {args.robot} ({os.path.basename(cfg.model_xml)})")
     print(f"  output -> {out}\n")
 
     trials, aggregates, perturbations = {}, {}, {}
@@ -164,7 +167,7 @@ def main():
     summary = {
         "created": dt.datetime.now().isoformat(timespec="seconds"),
         "harness": cfg.to_dict(),
-        "robot": engine.robot.describe(),
+        "robot": {"model": args.robot, **engine.robot.describe()},
         "adapter": {"name": name, "class": f"{adapter_cls.__module__}.{adapter_cls.__name__}",
                     "checkpoint": args.checkpoint, "checkpoint_sha256": sha256(args.checkpoint),
                     "config": adapter.config, "policy_dt": adapter.policy_dt,
