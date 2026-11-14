@@ -1,7 +1,7 @@
 # G1 Policy Evaluation Harness
 
 Fork of [likealiens/g1-eval-harness](https://github.com/likealiens/g1-eval-harness) (v1.0.0, commit `9916b20`).
-Our additions come first; his README follows.
+This fork adds motion-tracking support and a second robot model (below); the original README follows.
 
 ## What this fork adds (v2.0.0)
 
