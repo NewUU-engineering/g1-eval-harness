@@ -83,7 +83,7 @@ reading. Both are one flag apart; the choice is recorded in `summary.json`.
 - No sensor noise or latency injection (deliberately: the harness measures the policy, not the
   adapter's noise model). A `latency_steps` scenario option would be a useful addition.
 - Joint velocity limits are not checked (not in Unitree's MJCF).
-- The DDS bridge needs a first real run with SONIC and BeyondMimic owners. Since v1.1.0 both can be
+- The DDS bridge needs a first real run with SONIC and BeyondMimic owners. Since v2.0.0 both can be
   evaluated in-process instead (`adapters/beyondmimic_adapter.py`, `adapters/sonic_adapter.py`).
 - `ISAACLAB_G1_29DOF_ORDER` should be confirmed against BeyondMimic's exported metadata (Marvarid).
   For mjlab exports this is settled: they store `joint_names` in the ONNX metadata (STATUS.md, item 2).
