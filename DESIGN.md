@@ -44,7 +44,7 @@ three transports for the same thing, and the metrics code never knows which one 
 Recommendation: use (1) or (2) for comparisons; use (3) to check that the real deploy stack
 behaves the same as the exported policy.
 
-## 4. PD gains - a decision for the team
+## 4. PD gains - an open decision
 
 The task says "same PD gains". On the real G1, however, **gains are sent by the policy in every
 LowCmd**; unitree_rl_gym, BeyondMimic and SONIC were each trained with different gains. Forcing

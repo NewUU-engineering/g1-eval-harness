@@ -42,6 +42,15 @@ class TrialMetrics:
     episode_length_steps: int
     sim_time_s: float
     mean_policy_latency_ms: float       # wall-clock, informational only (hardware dependent)
+    # Motion trackers only (NaN otherwise), mjlab's definitions.
+    joint_pos_tracking_mae: float = float("nan")  # rad, mean |q - q_ref|
+    success_strict: float = float("nan")   # no failure and MPKPE <= 0.15 m throughout
+    mpkpe_m: float = float("nan")          # world frame
+    max_mpkpe_m: float = float("nan")
+    r_mpkpe_m: float = float("nan")        # reference re-anchored on the robot
+    max_r_mpkpe_m: float = float("nan")
+    drift_mean_m: float = float("nan")     # anchor xy distance from the reference
+    drift_max_m: float = float("nan")
 
     def to_dict(self) -> Dict:
         out = {}
@@ -58,10 +67,11 @@ class TrialMetrics:
 
 
 # Metrics where lower is better / higher is better (used by summary tables).
-LOWER_IS_BETTER = ["lin_vel_xy_rmse", "yaw_rate_rmse", "lin_vel_xy_rmse_instant", "yaw_rate_rmse_instant", "joint_pos_tracking_rmse", "action_rate_rms",
+LOWER_IS_BETTER = ["joint_pos_tracking_mae", "mpkpe_m", "max_mpkpe_m", "r_mpkpe_m", "max_r_mpkpe_m", "drift_mean_m", "drift_max_m",
+                   "lin_vel_xy_rmse", "yaw_rate_rmse", "lin_vel_xy_rmse_instant", "yaw_rate_rmse_instant", "joint_pos_tracking_rmse", "action_rate_rms",
                    "joint_acc_rms", "joint_jerk_rms", "mean_mech_power_w", "torque_rms",
                    "joint_limit_violation_rate", "near_joint_limit_rate", "torque_saturation_rate"]
-HIGHER_IS_BETTER = ["survival_fraction"]
+HIGHER_IS_BETTER = ["survival_fraction", "success_strict"]
 
 
 def _rms(x: np.ndarray) -> float:
@@ -75,10 +85,48 @@ def _moving_average(x: np.ndarray, k: int) -> np.ndarray:
     return (c[k:] - c[:-k]) / k
 
 
+def _yaw(q: np.ndarray) -> np.ndarray:
+    w, x, y, z = q[..., 0], q[..., 1], q[..., 2], q[..., 3]
+    return np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+
+
+def _quat_mul_conj(p: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """p * conj(q) for (..., 4) wxyz quaternions."""
+    pw, px, py, pz = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
+    qw, qx, qy, qz = q[..., 0], -q[..., 1], -q[..., 2], -q[..., 3]
+    return np.stack([pw * qw - px * qx - py * qy - pz * qz, pw * qx + px * qw + py * qz - pz * qy,
+                     pw * qy - px * qz + py * qw + pz * qx, pw * qz + px * qy - py * qx + pz * qw], axis=-1)
+
+
+def body_tracking_metrics(log: Dict[str, np.ndarray], anchor_index: int, strict_mpkpe_m: float,
+                          fell: bool) -> Dict[str, float]:
+    """MPKPE, root-relative MPKPE and drift (mjlab's definitions). Empty if not logged."""
+    if "body_pos" not in log or not len(log["body_pos"]):
+        return {}
+    body, ref = log["body_pos"], log["ref_body_pos"]          # (T, bodies, 3)
+    a = anchor_index
+    mpkpe = np.linalg.norm(ref - body, axis=-1).mean(axis=1)
+    drift = np.linalg.norm(ref[:, a, :2] - body[:, a, :2], axis=-1)
+    # As mjlab's body_pos_relative_w: turn by yaw(q_robot * q_ref^-1), move onto the robot anchor in xy.
+    turn = _yaw(_quat_mul_conj(log["anchor_quat_start"], log["ref_anchor_quat"]))
+    c, s_ = np.cos(turn)[:, None], np.sin(turn)[:, None]
+    rel = ref - ref[:, a:a + 1]
+    rel_turned = np.stack([c * rel[..., 0] - s_ * rel[..., 1], s_ * rel[..., 0] + c * rel[..., 1], rel[..., 2]], axis=-1)
+    anchor = np.concatenate([log["anchor_pos_start"][:, :2], ref[:, a, 2:]], axis=-1)[:, None]
+    r_mpkpe = np.linalg.norm(rel_turned + anchor - body, axis=-1).mean(axis=1)
+    return {
+        "success_strict": float((not fell) and mpkpe.max() <= strict_mpkpe_m),
+        "mpkpe_m": float(mpkpe.mean()), "max_mpkpe_m": float(mpkpe.max()),
+        "r_mpkpe_m": float(r_mpkpe.mean()), "max_r_mpkpe_m": float(r_mpkpe.max()),
+        "drift_mean_m": float(drift.mean()), "drift_max_m": float(drift.max()),
+    }
+
+
 def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s: float,
                     warmup_s: float, window_s: float, q_lower: np.ndarray, q_upper: np.ndarray,
                     soft_fraction: float, fall_reason: str, fall_time: Optional[float],
-                    phys: Dict[str, float]) -> TrialMetrics:
+                    phys: Dict[str, float], anchor_index: int = 7,
+                    strict_mpkpe_m: float = 0.15) -> TrialMetrics:
     nan = float("nan")
     if len(log.get("t", [])) == 0:
         # Failed before the first control step completed (e.g. NaN action at t=0).
@@ -97,8 +145,8 @@ def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s
     sim_time = float(phys["sim_time"])
     survival = min(1.0, sim_time / duration_s) if fell else 1.0
 
-    # --- velocity tracking (heading frame), only after warm-up ---
-    mask = t >= warmup_s
+    # --- velocity tracking (heading frame), only after warm-up; not for motion trackers ---
+    mask = (t >= warmup_s) & ("body_pos" not in log)
     lin_rmse = yaw_rmse = lin_i = yaw_i = mean_fwd = mean_lat = nan
     if mask.any():
         cmd, v, w = log["cmd"][mask], log["vel_heading"][mask, :2], log["yaw_rate"][mask]
@@ -115,9 +163,9 @@ def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s
     if "q_ref" in log and log["q_ref"].size:
         m = log["q_ref_mask"].astype(bool)
         err = (log["q"] - log["q_ref"])[m]
-        track = _rms(err)
+        track, track_mae = _rms(err), float(np.mean(np.abs(err)))
     else:
-        track = float("nan")
+        track = track_mae = float("nan")
 
     # --- smoothness (control rate) ---
     q_tgt, dq = log["q_target"], log["dq"]
@@ -147,6 +195,7 @@ def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s
         mean_forward_vel=mean_fwd,
         mean_lateral_vel=mean_lat,
         joint_pos_tracking_rmse=track,
+        joint_pos_tracking_mae=track_mae,
         action_rate_rms=action_rate,
         joint_acc_rms=acc_rms,
         joint_jerk_rms=jerk_rms,
@@ -160,6 +209,7 @@ def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s
         episode_length_steps=int(n),
         sim_time_s=sim_time,
         mean_policy_latency_ms=float(np.mean(log["latency_ms"])) if n else float("nan"),
+        **body_tracking_metrics(log, anchor_index, strict_mpkpe_m, fell),
     )
 
 

@@ -1,9 +1,9 @@
 # G1 Policy Evaluation Harness
 
-One shared MuJoCo evaluation tool for every Unitree G1 policy in the internship.
+One shared MuJoCo evaluation tool for every Unitree G1 policy.
 Every policy runs on the **same robot model, physics, control rate, torque limits,
 scenarios and seeds**, and gets the **same metrics, logs and videos**, so results
-from different interns can be compared directly.
+from different policies can be compared directly.
 
 The harness owns everything that must stay identical. Each policy owner writes
 one small **adapter** that translates between the harness and their policy.

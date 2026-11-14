@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Tuple
 import os
 
-HARNESS_VERSION = "1.0.0"
+HARNESS_VERSION = "1.1.0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(_HERE)
@@ -66,6 +66,20 @@ class HarnessConfig:
     fall_max_tilt_rad: float = 1.047         # 60 deg between pelvis z-axis and world z
     # Bodies allowed to touch the floor. Any other body touching it = fall.
     allowed_ground_contact_bodies: Tuple[str, ...] = ("left_ankle_roll_link", "right_ankle_roll_link")
+
+    # ---- Motion tracking (reference with a root pose): mjlab's failure rules and bodies ----
+    tracking_anchor_body: str = "torso_link"
+    tracking_anchor_height_threshold_m: float = 0.25    # |reference - robot| anchor height
+    tracking_anchor_gravity_threshold: float = 0.8      # |reference - robot| projected-gravity z of the anchor
+    tracking_end_effector_height_threshold_m: float = 0.25
+    tracking_end_effector_bodies: Tuple[str, ...] = (
+        "left_ankle_roll_link", "right_ankle_roll_link", "left_wrist_yaw_link", "right_wrist_yaw_link")
+    tracking_key_bodies: Tuple[str, ...] = (
+        "pelvis", "left_hip_roll_link", "left_knee_link", "left_ankle_roll_link",
+        "right_hip_roll_link", "right_knee_link", "right_ankle_roll_link", "torso_link",
+        "left_shoulder_roll_link", "left_elbow_link", "left_wrist_yaw_link",
+        "right_shoulder_roll_link", "right_elbow_link", "right_wrist_yaw_link")
+    tracking_strict_mpkpe_m: float = 0.15                # strict success (PHUMA)
 
     # ---- Metrics ----
     tracking_warmup_s: float = 1.0       # velocity tracking ignores the first second (starting from rest)

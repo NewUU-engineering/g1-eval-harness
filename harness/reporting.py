@@ -3,7 +3,7 @@ harness/reporting.py
 
 Writes everything a run produces:
   summary.json          config snapshot + every trial + per-scenario aggregates
-  summary.md            human-readable table (paste into reports / Slack)
+  summary.md            human-readable table (paste into reports)
   logs/<scen>_seed<k>.npz   per-control-step time series of each trial
   videos/<scen>_seed<k>.mp4 one video per scenario (first seed)
 """
@@ -19,6 +19,9 @@ TABLE_COLUMNS = [
     ("lin_vel_xy_rmse", "v_xy RMSE m/s", "{:.3f}"),
     ("yaw_rate_rmse", "yaw RMSE rad/s", "{:.3f}"),
     ("joint_pos_tracking_rmse", "track RMSE rad", "{:.3f}"),
+    ("success_strict", "strict success", "{:.0%}"),
+    ("mpkpe_m", "MPKPE m", "{:.3f}"),
+    ("r_mpkpe_m", "r-MPKPE m", "{:.3f}"),
     ("action_rate_rms", "action rate rad/s", "{:.2f}"),
     ("joint_jerk_rms", "jerk rad/s^3", "{:.0f}"),
     ("mean_mech_power_w", "power W", "{:.0f}"),

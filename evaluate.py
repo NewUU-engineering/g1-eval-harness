@@ -147,9 +147,12 @@ def main():
                 perturbations[scen_name][f"seed_{seed}"] = res.perturbations
                 save_trial_log(res.log, os.path.join(out, "logs", f"{scen_name}_seed{seed}.npz"))
                 status = f"FELL ({m.fall_reason} @ {m.time_to_fall_s:.2f}s)" if m.fall else "ok"
-                v = "n/a" if not np.isfinite(m.lin_vel_xy_rmse) else f"{m.lin_vel_xy_rmse:.3f}"
+                if np.isfinite(m.mpkpe_m):  # motion tracker
+                    score = f"MPKPE {m.mpkpe_m:6.3f}"
+                else:
+                    score = "v_xy rmse " + ("   n/a" if not np.isfinite(m.lin_vel_xy_rmse) else f"{m.lin_vel_xy_rmse:6.3f}")
                 print(f"  {scen_name:22s} seed {seed:<4d} {status:36s} surv {m.survival_fraction:4.2f} | "
-                      f"v_xy rmse {v:>6s} | act-rate {m.action_rate_rms:6.2f} | power {m.mean_mech_power_w:6.0f} W")
+                      f"{score} | act-rate {m.action_rate_rms:6.2f} | power {m.mean_mech_power_w:6.0f} W")
                 if record and res.frames:
                     vp = os.path.join(out, "videos", f"{scen_name}_seed{seed}.mp4")
                     if save_video(res.frames, vp, fps=int(round(1 / (cfg.control_dt * cfg.video_stride)))):
