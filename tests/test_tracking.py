@@ -125,7 +125,7 @@ def test_body_metrics_shift_counts_in_world_error_but_not_root_relative():
 
 
 def _mjlab_r_mpkpe(body, ref, anchor_pos_start, anchor_quat_start, ref_anchor_quat, a=7):
-    """mjlab's compute_root_relative_mpkpe written out with MuJoCo's quaternion functions, one step at a time."""
+    """mjlab's r-MPKPE, step by step."""
     errors = []
     for k in range(len(body)):
         delta = np.zeros(4)

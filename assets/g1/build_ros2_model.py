@@ -1,4 +1,4 @@
-"""g1_29dof_ros2.xml from the ROS 2 stack's G1 model (unitree_description, BSD): adds motors and a pelvis accelerometer."""
+"""G1 from the ROS 2 stack (unitree_description, BSD) with motors and a pelvis accelerometer."""
 
 import os
 import re
