@@ -14,7 +14,7 @@ Notation: control step k (50 Hz, Δt = 0.02 s), physics step i (500 Hz). Joint a
 | `fall` | bool | trial ended early for any reason below |
 | `fall_reason` | text | `base_too_low` (pelvis z < 0.40 m), `base_tilt` (angle between pelvis z-axis and world z > 60°), `ground_contact:<body>` (any body except the two `ankle_roll_link`s touches the floor), `sim_unstable` (MuJoCo NaN/Inf acceleration), `invalid_action` (policy returned NaN/Inf) |
 | `time_to_fall_s` | s | sim time at the end of the trial if it fell, else empty |
-| `survival_fraction` | 0–1 | time survived / scenario duration (1.0 if no fall) |
+| `survival_fraction` | 0–1 | time survived / episode length (1.0 if no fall); the episode is the scenario's 10 s, or the motion for motion trackers (§3) |
 
 In aggregates, the mean of `fall` is the **fall rate** over seeds.
 
@@ -45,6 +45,25 @@ Only computed if the adapter implements `reference(t)` (BeyondMimic, SONIC, any 
 | key | unit | definition |
 |---|---|---|
 | `joint_pos_tracking_rmse` | rad | sqrt(mean over steps and masked joints of (q − q_ref)²) |
+| `joint_pos_tracking_mae` | rad | mean over steps and masked joints of \|q − q_ref\| (the joint error we report for mjlab runs) |
+
+If the reference also has a root pose, the policy is a **motion tracker**. Failure is then judged
+against the reference (`fall_reason` = `tracking:anchor_height`, `tracking:anchor_orientation` or
+`tracking:end_effector_height`, thresholds in `harness/config.py`, same as BeyondMimic / mjlab), and the
+14 key bodies (`tracking_key_bodies`, mjlab's set) of robot and reference are compared every control
+step (reference at the start of the step, robot after it, as in mjlab's reward). The reference is posed
+on the harness robot model and shifted vertically so that it starts at the robot's spawn height.
+
+| key | unit | definition |
+|---|---|---|
+| `mpkpe_m` | m | mean over steps of the mean key-body distance ‖p_ref − p‖, world frame |
+| `max_mpkpe_m` | m | worst step of the above |
+| `r_mpkpe_m` | m | same after re-anchoring the reference on the robot as mjlab's `body_pos_relative_w` does: turned about z by the yaw of q_anchor · q_ref_anchor⁻¹ and moved onto the robot's anchor in xy (keeps its own height), using the robot's anchor at the start of the step. Pose error without drift. |
+| `max_r_mpkpe_m` | m | worst step of the above |
+| `drift_mean_m`, `drift_max_m` | m | anchor (torso) xy distance from the reference path |
+| `success_strict` | 0/1 | no failure and `max_mpkpe_m` ≤ 0.15 m throughout (PHUMA's strict success) |
+
+Velocity-tracking metrics are n/a for motion trackers.
 
 The adapter provides the reference (it owns the motion file and its timing); the harness
 measures the error against the simulated robot. Velocity policies show n/a.

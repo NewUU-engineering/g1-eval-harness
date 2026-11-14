@@ -1,5 +1,29 @@
 # G1 Policy Evaluation Harness
 
+> **This fork (v1.1.0)** builds on the original harness
+> ([likealiens/g1-eval-harness](https://github.com/likealiens/g1-eval-harness), v1.0.0, commit `9916b20`).
+> It adds support for motion-tracking policies (§3d): episodes as long as the motion, the BeyondMimic
+> failure rule against the reference, body-position metrics (MPKPE, root-relative MPKPE, drift, strict
+> success), and adapters for BeyondMimic (mjlab ONNX) and SONIC (ViT-H's `g1_tracker`).
+> Walking policies give exactly the same results as v1.0.0. What is done and what is open: `STATUS.md`.
+
+## New in this fork: motion-tracking policies
+
+BeyondMimic and SONIC run with the same physics, scenarios and seeds as walking policies, and are
+scored against their reference motion: success, strict success, MPKPE, root-relative MPKPE, drift,
+joint error.
+
+```bash
+pip install onnx onnxruntime scipy
+python evaluate.py --adapter adapters.beyondmimic_adapter:BeyondMimicAdapter --checkpoint policy.onnx
+python evaluate.py --adapter adapters.sonic_adapter:SonicAdapter --checkpoint model_step_020000_g1.onnx \
+    --set tracker_root=ViT-H-release/g1_tracker --set motion=motion.npz
+```
+
+Inputs, how it works and how it was checked: §3d. Metric definitions: METRICS.md §3.
+
+---
+
 One shared MuJoCo evaluation tool for every Unitree G1 policy.
 Every policy runs on the **same robot model, physics, control rate, torque limits,
 scenarios and seeds**, and gets the **same metrics, logs and videos**, so results
@@ -22,6 +46,8 @@ g1-eval-harness/
 ├── adapters/                   # ONE FILE PER POLICY
 │   ├── base.py                 #   PolicyAdapter interface
 │   ├── unitree_rl_gym_adapter.py   # working example (unitree_rl_gym pretrained G1)
+│   ├── beyondmimic_adapter.py  #   motion tracker: BeyondMimic (mjlab ONNX export)
+│   ├── sonic_adapter.py        #   motion tracker: SONIC (ViT-H g1_tracker)
 │   ├── template_adapter.py     #   copy this to start your own
 │   └── external/               #   policies that run in another process
 │       ├── protocol.py         #     standalone TCP protocol (copy into your env)
@@ -45,7 +71,7 @@ g1-eval-harness/
 python -m venv .venv && source .venv/bin/activate      # Python 3.9+
 pip install -r requirements.txt
 pip install torch            # recommended; without it the numpy fallback runs the example policy
-python -m pytest -q tests    # 15 tests, ~5 s
+python -m pytest -q tests    # 22 tests, ~5 s
 ```
 
 Videos are rendered offscreen. On Linux `evaluate.py` uses `MUJOCO_GL=egl`
@@ -138,7 +164,7 @@ You never edit `harness/`. You write one adapter.
 def default_pose(self):          # 29 canonical angles to spawn in
 def reset(self, seed):           # clear RNN memory, last action, phase clock
 def act(self, state):            # RobotState -> JointCommand(q, kp, kd[, dq, tau_ff])
-def reference(self, t):          # optional: {"q": canonical[29]} for motion-tracking policies
+def reference(self, t):          # optional: {"q": canonical[29]} for motion-tracking policies (§3d)
 ```
 
 `state` gives you `q, dq, tau, base_quat (wxyz), base_ang_vel (body), base_lin_acc (body),
@@ -191,6 +217,57 @@ python evaluate.py --adapter adapters.external.unitree_dds_bridge:UnitreeDDSBrid
 > Where possible, prefer exporting the policy (ONNX/TorchScript) and using 3a - it is
 > deterministic and much easier to debug.
 
+### 3d. Motion-tracking policies (BeyondMimic, SONIC)
+
+An adapter becomes a motion tracker by returning the reference root pose from `reference(t)`
+(`{"q", "root_pos", "root_quat"}`). The harness then, automatically:
+
+- runs each episode for `motion_duration()` instead of the scenario's 10 s, and spawns the robot
+  at `default_base_pose()` (where the reference starts);
+- judges failure against the reference, with BeyondMimic's rules (`harness/config.py`): anchor
+  (torso) height off by > 0.25 m, anchor tilt off by > 0.8 in projected gravity, or a hand/foot
+  height off by > 0.25 m. A motion may crouch, kneel or jump on purpose, so the absolute fall rules do
+  not apply;
+- adds MPKPE, root-relative MPKPE, drift and strict success (METRICS.md §3), on the same 14 bodies as
+  mjlab's evaluation. Velocity metrics are n/a (there is no velocity command).
+
+Scenarios, physics, PD law, seeds, smoothness, effort and limit metrics are the same as for walking policies.
+
+```bash
+pip install onnx onnxruntime scipy
+
+# BeyondMimic: everything (network, reference motion, gains) comes from the mjlab ONNX export
+python evaluate.py --adapter adapters.beyondmimic_adapter:BeyondMimicAdapter --checkpoint policy.onnx
+
+# SONIC: one policy, any motion (g1_tracker input .npz)
+python evaluate.py --adapter adapters.sonic_adapter:SonicAdapter \
+    --checkpoint ViT-H-release/inputs/checkpoints/g1_tracker/model_step_020000_g1.onnx \
+    --set tracker_root=ViT-H-release/g1_tracker --set motion=motion.npz
+```
+
+**Inputs.**
+
+- **BeyondMimic:** an ONNX file exported by mjlab's tracking task (`Mjlab-Tracking-Flat-Unitree-G1`).
+  Its metadata (`joint_names`, `default_joint_pos`, `action_scale`, `joint_stiffness`,
+  `anchor_body_name`, ...) and the reference motion stored inside are all the adapter needs.
+  ONNX files from older exporters lack `anchor_body_name`; re-export them.
+- **SONIC:** the checkpoint and `g1_tracker` come from [ViT-H](https://github.com/mileret/ViT-H-release)
+  (`hf download eerrr1/ViT-H-checkpoints model_step_020000_g1.onnx --repo-type dataset`). The motion is
+  a `g1_tracker` input `.npz`: `joint_pos` (T, 29, IsaacLab joint order, rad), `root_pos_w` (T, 3, z-up),
+  `root_quat_w` (T, 4, wxyz), `body_pos_w` (T, 30, 3; zeros are fine, the tracker recomputes it) and
+  `fps` (or `--set motion_fps=30`). The output of ViT-H's `tools/infer_video.py` already has these
+  fields (add `fps`). For a GMR motion (`.pkl` with `dof_pos` in MuJoCo
+  order and `root_rot` in xyzw), reorder the joints to IsaacLab order (`utils/joint_orders.py`) and
+  the quaternion to wxyz.
+
+Checked against the policies' own evaluations: BeyondMimic on the LAFAN1 demo dance gives
+r-MPKPE 0.035 m and joint error 0.082 rad (mjlab: 0.038, 0.084) and fails on the end-effector rule
+at 106.9 s, where mjlab's failures cluster. SONIC on a tennis serve fails at 7.82 s for a GVHMR + GMR
+motion and succeeds for a ViT-H motion, as in `g1_tracker`.
+
+Both adapters read the true base position (`uses_privileged_state = True`); on the robot this comes
+from a state estimator.
+
 ## 4. Rules that keep it fair (owned by `harness/config.py`)
 
 - Robot: Unitree `g1_29dof_rev_1_0` (assets/g1, generated by `build_harness_model.py`)
@@ -199,6 +276,7 @@ python evaluate.py --adapter adapters.external.unitree_dds_bridge:UnitreeDDSBrid
 - PD law `tau = kp(q* − q) + kd(dq* − dq) + tau_ff` computed by the harness every physics step
 - Spawn on the ground with seeded ±0.02 rad joint noise; seeded push time/direction jitter
 - Fall = pelvis < 0.40 m, tilt > 60°, or any body other than the feet touches the floor
+  (motion-tracking policies: failure against the reference instead, §3d)
 - Any change to these goes through a reviewed commit to `harness/`, and bumps `HARNESS_VERSION`
 
 Metric definitions: **METRICS.md**. Why it is designed this way: **DESIGN.md**.
