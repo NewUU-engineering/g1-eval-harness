@@ -60,7 +60,9 @@ class BeyondMimicAdapter(PolicyAdapter):
         self.fk_qadr = np.array([self.fk_model.joint(n).qposadr[0] for n in self.POLICY_JOINT_ORDER])
         self.imu_offset = self.fk_model.site("imu_in_pelvis").pos.copy()  # pelvis frame
 
-        self.session = onnxruntime.InferenceSession(checkpoint_path, providers=["CPUExecutionProvider"])
+        options = onnxruntime.SessionOptions()
+        options.intra_op_num_threads = options.inter_op_num_threads = 1  # one core per run, like SONIC
+        self.session = onnxruntime.InferenceSession(checkpoint_path, options, providers=["CPUExecutionProvider"])
         self.last_action = np.zeros(29)
 
     def _frame(self, t: float) -> int:
