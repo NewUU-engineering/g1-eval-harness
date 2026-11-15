@@ -10,7 +10,7 @@ from harness.metrics import aggregate, body_tracking_metrics
 from harness.reporting import markdown_table
 from harness.scenarios import TEST_SCENARIOS
 from harness.types import JointCommand
-from tests.test_harness import STIFF_KD, STIFF_KP
+from tests.test_harness import STIFF_KD, STIFF_KP, HoldPose, short
 
 
 class HoldPoseTracker(PolicyAdapter):
@@ -77,29 +77,48 @@ def rising_reference(duration=2.0):
     return adapter
 
 
-def test_default_still_ends_at_tracking_failure(engine):
-    flat = TEST_SCENARIOS["flat_nominal"]
-    a = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
-    b = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), keep_running_after_tracking_failure=False).metrics
-    da, db = a.to_dict(), b.to_dict()
-    da.pop("mean_policy_latency_ms"); db.pop("mean_policy_latency_ms")
-    assert da == db and not SPLIT_KEYS & set(da)
+def without_latency(m):
+    d = m.to_dict()
+    d.pop("mean_policy_latency_ms")
+    return d
+
+
+def test_stop_at_tracking_failure_ends_the_trial(engine):
+    a = engine.run_trial(rising_reference(), TEST_SCENARIOS["flat_nominal"], 0, np.zeros(3),
+                         stop_at_tracking_failure=True).metrics
+    da = without_latency(a)
+    assert not SPLIT_KEYS & set(da)
     assert a.fall and a.fall_reason == "tracking:anchor_height" and a.sim_time_s == a.time_to_fall_s
     assert markdown_table({"flat_nominal": aggregate({"seed_0": da})}).startswith("| scenario | falls | survival |")
 
 
+def test_default_keeps_running_after_tracking_failure(engine):
+    flat = TEST_SCENARIOS["flat_nominal"]
+    a = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
+    b = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), stop_at_tracking_failure=False).metrics
+    assert without_latency(a) == without_latency(b) and SPLIT_KEYS <= set(a.to_dict())
+
+
+def test_walking_policy_ignores_the_option(engine):
+    scen = short("push_lateral_medium", 5.0)
+    a = engine.run_trial(HoldPose(), scen, 7, np.zeros(3)).metrics
+    b = engine.run_trial(HoldPose(), scen, 7, np.zeros(3), stop_at_tracking_failure=True).metrics
+    assert without_latency(a) == without_latency(b) and not SPLIT_KEYS & set(a.to_dict())
+
+
 def test_keep_running_separates_tracking_failure_from_fall(engine):
     flat = TEST_SCENARIOS["flat_nominal"]
-    default = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
-    m = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True).metrics
+    stopped = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), stop_at_tracking_failure=True).metrics
+    m = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
     assert m.tracking_failure and m.tracking_failure_reason == "tracking:anchor_height"
-    assert m.tracking_failure_time_s == default.time_to_fall_s
+    assert m.tracking_failure_time_s == stopped.time_to_fall_s
     assert not m.fell and m.fell_reason == "" and np.isnan(m.fell_time_s)
     assert m.sim_time_s == pytest.approx(2.0, abs=0.03)       # ran the whole motion
     for k in ("fall", "fall_reason", "time_to_fall_s", "survival_fraction", "success_strict"):
-        assert getattr(m, k) == getattr(default, k), k
-    assert m.pre_failure_mpkpe_m == pytest.approx(default.mpkpe_m)
-    assert m.pre_failure_joint_pos_tracking_mae == pytest.approx(default.joint_pos_tracking_mae)
+        assert getattr(m, k) == getattr(stopped, k), k
+    assert m.pre_failure_mpkpe_m == pytest.approx(stopped.mpkpe_m)
+    assert m.pre_failure_r_mpkpe_m == pytest.approx(stopped.r_mpkpe_m)
+    assert m.pre_failure_joint_pos_tracking_mae == pytest.approx(stopped.joint_pos_tracking_mae)
     assert SPLIT_KEYS <= set(m.to_dict())
     assert "| failed | track fail | real falls |" in markdown_table({"flat_nominal": aggregate({"seed_0": m.to_dict()})})
 
@@ -112,7 +131,7 @@ def limp(duration):
 
 def test_real_fall_is_head_down_for_over_two_seconds(engine):
     flat = TEST_SCENARIOS["flat_nominal"]
-    res = engine.run_trial(limp(4.0), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True)
+    res = engine.run_trial(limp(4.0), flat, 0, np.zeros(3))
     m = res.metrics
     assert m.fell and m.fell_reason == "head_down"
     assert m.sim_time_s - m.fell_time_s == pytest.approx(2.0, abs=1e-6)  # ends 2 s after the head went down
@@ -120,7 +139,7 @@ def test_real_fall_is_head_down_for_over_two_seconds(engine):
     assert m.tracking_failure and m.tracking_failure_time_s <= m.fell_time_s
     assert m.fall_reason == m.tracking_failure_reason
 
-    res = engine.run_trial(limp(2.0), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True)
+    res = engine.run_trial(limp(2.0), flat, 0, np.zeros(3))
     m = res.metrics
     assert res.log["head_height"][-1] < 0.5 and m.sim_time_s == pytest.approx(2.0, abs=0.03)
     assert m.fell and m.fell_reason == "head_down"            # down for less than 2 s, but still down at the end
@@ -131,8 +150,7 @@ def test_real_fall_is_head_down_for_over_two_seconds(engine):
 def test_head_down_briefly_or_at_the_end(engine, monkeypatch, down_from, down_to, fell):
     """Head down for 0.5 s mid-motion is no fall; head down when the motion ends is one."""
     monkeypatch.setattr(engine, "_head_height", lambda d: 0.3 if down_from < d.time < down_to else 1.25)
-    m = engine.run_trial(HoldPoseTracker(), TEST_SCENARIOS["flat_nominal"], 0, np.zeros(3),
-                         keep_running_after_tracking_failure=True).metrics
+    m = engine.run_trial(HoldPoseTracker(), TEST_SCENARIOS["flat_nominal"], 0, np.zeros(3)).metrics
     assert not m.tracking_failure and m.sim_time_s == pytest.approx(2.0, abs=0.03)
     assert m.fell == fell and m.fall == fell
     if fell:

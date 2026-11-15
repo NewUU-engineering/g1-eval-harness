@@ -135,8 +135,9 @@ class SimulationEngine:
 
     # ------------------------------------------------------------------ trial
     def run_trial(self, adapter, scenario: Scenario, seed: int, command: np.ndarray,
-                  record_video: bool = False, keep_running_after_tracking_failure: bool = False) -> TrialResult:
-        """keep_running_after_tracking_failure: a motion tracker runs on until the motion ends or its head stays down."""
+                  record_video: bool = False, stop_at_tracking_failure: bool = False) -> TrialResult:
+        """A motion tracker runs on after a tracking failure until the motion ends or its head stays down,
+        unless stop_at_tracking_failure (BeyondMimic's termination)."""
         cfg, r, m = self.cfg, self.robot, self.model
         if adapter.command_rate not in ("control", "physics"):
             raise ValueError("adapter.command_rate must be 'control' or 'physics'")
@@ -182,7 +183,7 @@ class SimulationEngine:
         ref0 = adapter.reference(0.0)
         tracking = is_motion_tracker(ref0)
         split = {"tracking_failure_reason": "", "tracking_failure_time_s": None, "tracking_failure_steps": 0} \
-            if tracking and keep_running_after_tracking_failure else None
+            if tracking and not stop_at_tracking_failure else None
         if tracking and "q" not in ref0:
             r.restore_nominal()
             raise ValueError("adapter.reference() gives a root pose but no joint angles 'q'.")

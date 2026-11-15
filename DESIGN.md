@@ -91,6 +91,10 @@ reading. Both are one flag apart; the choice is recorded in `summary.json`.
   push direction. Same seed → same disturbances for every policy; same seed + same policy on the same
   machine/backend → bit-identical trial (tested). Across machines or backends, trials on the edge
   of falling can flip (see README, Reproducibility), so comparisons are run on one machine.
+- **Tracking failure vs real fall** (motion trackers): the episode runs on after the first tracking
+  failure, so a policy that loses the reference but stays on its feet is told apart from one that
+  falls (METRICS.md §1). `--stop-at-tracking-failure` ends it at the failure, as BeyondMimic's
+  termination does; success and the tracking error up to the failure are the same either way.
 - **Friction scenarios** set friction on the floor *and* the robot's geoms, because MuJoCo takes
   the maximum of the two.
 - **Torque saturation** is counted on the commanded torque before clipping.

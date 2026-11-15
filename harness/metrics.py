@@ -51,7 +51,7 @@ class TrialMetrics:
     max_r_mpkpe_m: float = float("nan")
     drift_mean_m: float = float("nan")     # anchor xy distance from the reference
     drift_max_m: float = float("nan")
-    # Only with --keep-running-after-tracking-failure (None and left out of to_dict otherwise).
+    # Only for motion trackers without --stop-at-tracking-failure (None and left out of to_dict otherwise).
     tracking_failure: Optional[bool] = None
     tracking_failure_reason: Optional[str] = None
     tracking_failure_time_s: Optional[float] = None

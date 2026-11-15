@@ -5,7 +5,9 @@
 - **v1.0.0** (`9916b20`): walking policies; the deliverables marked 1.0.0 below.
 - **v2.0.0**: motion-tracking policies and a second robot model.
   - Motion trackers: episodes as long as the motion, failure judged against the reference
-    (BeyondMimic's rules), and MPKPE, root-relative MPKPE, drift and strict success.
+    (BeyondMimic's rules), and MPKPE, root-relative MPKPE, drift and strict success. The episode runs
+    on after a tracking failure, so real falls (head down) are reported apart;
+    `--stop-at-tracking-failure` ends it at the failure instead.
   - Adapters for BeyondMimic (mjlab ONNX export), SONIC v1.1 (NVIDIA's release) and SONIC (ViT-H)
     (ViT-H's fine-tune, run by its `g1_tracker`), each checked against the policy's own
     sim-to-sim (README §5).
@@ -21,7 +23,7 @@
 | README: how to add your own policy | `README.md` §3 | 1.0.0, 2.0.0 | done (in-process, socket, DDS; motion trackers in §3d) |
 | Direct call **and** externally running policies, same metrics | `adapters/external/` | 1.0.0 | socket path done and tested; DDS path written, untested (below) |
 | Design based on existing sim2sim setups | `DESIGN.md` | 1.0.0 | done |
-| Tests | `tests/` (`python -m pytest -q tests`) | 1.0.0, 2.0.0 | 30/30 pass (15 from v1.0.0) |
+| Tests | `tests/` (`python -m pytest -q tests`) | 1.0.0, 2.0.0 | 32/32 pass (15 from v1.0.0) |
 | Motion-tracking policies | `harness/`, `METRICS.md` §3, `README.md` §3d | 2.0.0 | done; walking-policy results identical to v1.0.0 |
 | BeyondMimic adapter | `adapters/beyondmimic_adapter.py` | 2.0.0 | done, checked against mjlab and the ROS 2 stack on the LAFAN1 demo dance |
 | SONIC v1.1 adapter (encoder + decoder, mode `g1`) | `adapters/sonic_v1_1_adapter.py` | 2.0.0 | done, checked against NVIDIA's sim-to-sim on a tennis serve, a jump kick and their squat |

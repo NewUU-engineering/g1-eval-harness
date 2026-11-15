@@ -28,7 +28,7 @@ TABLE_COLUMNS = [
     ("joint_limit_violation_rate", "q-limit viol", "{:.1%}"),
     ("torque_saturation_rate", "tau sat", "{:.1%}"),
 ]
-# --keep-running-after-tracking-failure: `fall` is then the first failure of either kind.
+# Motion trackers that keep running after a tracking failure (the default): `fall` is the first failure of either kind.
 SPLIT_COLUMNS = [
     ("fall", "failed", "{:.0%}"),
     ("tracking_failure", "track fail", "{:.0%}"),

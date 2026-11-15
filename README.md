@@ -115,7 +115,7 @@ Common options:
 | `--set key=value` / `--adapter-config cfg.yaml` | pass options to your adapter |
 | `--no-video`, `--video-all-seeds` | video control (default: first seed of each scenario) |
 | `--output-dir results/x` | default `results/<policy>_<timestamp>` |
-| `--keep-running-after-tracking-failure` | motion trackers: don't stop at a tracking failure; report it and real falls separately (§3d) |
+| `--stop-at-tracking-failure` | motion trackers: end the episode at the first tracking failure, with no real falls (§3d) |
 
 ### What you get
 
@@ -252,10 +252,11 @@ How a motion tracker is scored:
 - it fails when the torso height, torso tilt or a hand/foot height drifts from the reference
   (thresholds in `harness/config.py`, as in BeyondMimic); the absolute fall rules don't apply,
   since a motion may kneel or jump on purpose;
-- by default the episode ends at the first tracking failure, counted as `fall`. With
-  `--keep-running-after-tracking-failure` it runs on: the tracking failure (`tracking_failure`, its time
-  and rule) and real falls (`fell`: head below 0.5 m for over 2 s, or still down when the motion ends) are reported
-  separately (METRICS.md §1);
+- the episode runs on after a tracking failure, so the tracking failure (`tracking_failure`, its time
+  and rule) and real falls (`fell`: head below 0.5 m for over 2 s, or still down when the motion ends) are
+  reported separately (METRICS.md §1); `fall` is the first failure of either kind. With
+  `--stop-at-tracking-failure` the episode ends at the first tracking failure, as in BeyondMimic;
+  success and tracking error up to the failure are the same either way;
 - MPKPE, root-relative MPKPE, drift and strict success are computed on mjlab's 14 key bodies;
   velocity metrics are n/a (METRICS.md §3).
 

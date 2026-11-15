@@ -107,10 +107,10 @@ def main():
     ap.add_argument("--no-video", action="store_true")
     ap.add_argument("--video-all-seeds", action="store_true")
     ap.add_argument("--list-scenarios", action="store_true")
-    ap.add_argument("--keep-running-after-tracking-failure", action="store_true",
-                    help="motion trackers: record the first tracking failure but keep running until the motion "
-                         "ends or the robot really falls (head below 0.5 m for over 2 s, or still down when the motion "
-                         "ends); see METRICS.md")
+    ap.add_argument("--stop-at-tracking-failure", action="store_true",
+                    help="motion trackers: end the episode at the first tracking failure (BeyondMimic's termination). "
+                         "Default: keep running until the motion ends or the robot really falls (head below 0.5 m "
+                         "for over 2 s, or still down when the motion ends); see METRICS.md")
     args = ap.parse_args()
 
     if args.list_scenarios:
@@ -160,7 +160,7 @@ def main():
             for i, seed in enumerate(args.seeds):
                 record = (not args.no_video) and (i == 0 or args.video_all_seeds)
                 res = engine.run_trial(adapter, scen, seed, command, record_video=record,
-                                       keep_running_after_tracking_failure=args.keep_running_after_tracking_failure)
+                                       stop_at_tracking_failure=args.stop_at_tracking_failure)
                 m = res.metrics
                 trials[scen_name][f"seed_{seed}"] = m.to_dict()
                 perturbations[scen_name][f"seed_{seed}"] = res.perturbations
@@ -204,7 +204,7 @@ def main():
         "perturbations": perturbations,
         "wall_time_s": round(time.time() - t_start, 1),
     }
-    if args.keep_running_after_tracking_failure:
+    if tracker and not args.stop_at_tracking_failure:
         summary["harness"].update(keep_running_after_tracking_failure=True,
                                   real_fall_head_height_m=REAL_FALL_HEAD_HEIGHT_M, real_fall_time_s=REAL_FALL_TIME_S)
     write_summary(out, summary)
