@@ -108,7 +108,8 @@ def main():
     ap.add_argument("--list-scenarios", action="store_true")
     ap.add_argument("--keep-running-after-tracking-failure", action="store_true",
                     help="motion trackers: record the first tracking failure but keep running until the motion "
-                         "ends or the robot really falls (head below 0.5 m for over 2 s); see METRICS.md")
+                         "ends or the robot really falls (head below 0.5 m for over 2 s, or still down when the motion "
+                         "ends); see METRICS.md")
     args = ap.parse_args()
 
     if args.list_scenarios:

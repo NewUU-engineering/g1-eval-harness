@@ -104,7 +104,7 @@ def write_summary(out_dir: str, summary: Dict):
           f"{summary['harness']['tracking_warmup_s']} s and are n/a if the robot fell before that.", ""]
     if summary["harness"].get("keep_running_after_tracking_failure"):
         md += ["Motion trackers kept running after a tracking failure. `failed` = tracking failure or fall, "
-               "`real falls` = head below 0.5 m for over 2 s; tracking metrics cover the whole run, "
+               "`real falls` = head below 0.5 m for over 2 s or at the end; tracking metrics cover the whole run, "
                "`pre-fail` only up to the first tracking failure.", ""]
     md += [markdown_table(summary["aggregates"]), ""]
     with open(os.path.join(out_dir, "summary.md"), "w") as f:

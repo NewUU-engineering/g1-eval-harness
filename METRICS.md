@@ -26,9 +26,10 @@ option the first tracking failure is recorded and the episode runs on until the 
 **really falls**: `head_down`, the head below 0.5 m for longer than 2 s, as in our ROS 2 analysis
 (`analyze_ros2.py`). The head is the `mid360` lidar site of the `ros2` model (the same point, `torso_link`
 + (0.0003, 0, 0.416) m, on `unitree_rl_gym`); it stands at 1.25 m. The trial ends once the head has been
-down for 2 s; `fell_time_s` is when it went down. Pelvis height, tilt and ground contact are not checked,
-since motions may crouch, kneel or cartwheel on purpose (the LAFAN1 cartwheel tilts the pelvis to 149°, with
-the head below 0.5 m for 0.56 s). `sim_unstable` and `invalid_action` still end the trial at once.
+down for 2 s; a head still below 0.5 m when the motion ends is a real fall too. `fell_time_s` is when the
+head went down. Pelvis height, tilt and ground contact are not checked, since motions may crouch, kneel or
+cartwheel on purpose (the LAFAN1 cartwheel tilts the pelvis to 149°, with the head below 0.5 m for 0.56 s).
+`sim_unstable` and `invalid_action` still end the trial at once.
 
 `fall`, `fall_reason`, `time_to_fall_s`, `survival_fraction` and `success_strict` keep their meaning: the
 first failure of either kind (same values as without the option, unless the robot really falls before any
@@ -38,7 +39,7 @@ tracking rule fires). Added per trial:
 |---|---|---|
 | `tracking_failure` | bool | a tracking rule (§3) fired |
 | `tracking_failure_reason`, `tracking_failure_time_s` | text, s | the first one, and its sim time |
-| `fell` | bool | real fall, as above |
+| `fell` | bool | real fall: head below 0.5 m for over 2 s, or still below when the motion ends |
 | `fell_reason`, `fell_time_s` | text, s | `head_down`, `sim_unstable` or `invalid_action`, and its sim time (for `head_down`, when the head went down) |
 | `pre_failure_mpkpe_m`, `pre_failure_r_mpkpe_m` | m | §3 metrics up to the first tracking failure (whole run if none); same as without the option |
 | `pre_failure_joint_pos_tracking_mae` | rad | same for `joint_pos_tracking_mae` |

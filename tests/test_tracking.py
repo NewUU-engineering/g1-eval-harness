@@ -121,8 +121,22 @@ def test_real_fall_is_head_down_for_over_two_seconds(engine):
     assert m.fall_reason == m.tracking_failure_reason
 
     res = engine.run_trial(limp(2.0), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True)
-    assert res.log["head_height"].min() < 0.5 and res.log["base_pos"][:, 2].min() < 0.4
-    assert not res.metrics.fell                               # down, but for less than 2 s
+    m = res.metrics
+    assert res.log["head_height"][-1] < 0.5 and m.sim_time_s == pytest.approx(2.0, abs=0.03)
+    assert m.fell and m.fell_reason == "head_down"            # down for less than 2 s, but still down at the end
+    assert m.sim_time_s - m.fell_time_s < 2.0
+
+
+@pytest.mark.parametrize("down_from, down_to, fell", [(0.5, 1.0, False), (1.51, 9.0, True)])
+def test_head_down_briefly_or_at_the_end(engine, monkeypatch, down_from, down_to, fell):
+    """Head down for 0.5 s mid-motion is no fall; head down when the motion ends is one."""
+    monkeypatch.setattr(engine, "_head_height", lambda d: 0.3 if down_from < d.time < down_to else 1.25)
+    m = engine.run_trial(HoldPoseTracker(), TEST_SCENARIOS["flat_nominal"], 0, np.zeros(3),
+                         keep_running_after_tracking_failure=True).metrics
+    assert not m.tracking_failure and m.sim_time_s == pytest.approx(2.0, abs=0.03)
+    assert m.fell == fell and m.fall == fell
+    if fell:
+        assert m.fell_reason == "head_down" and m.fell_time_s == pytest.approx(1.52, abs=0.011)
 
 
 def test_spawn_quaternion_is_normalised(engine):

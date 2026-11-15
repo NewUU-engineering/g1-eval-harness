@@ -248,7 +248,8 @@ How a motion tracker is scored:
   since a motion may kneel or jump on purpose;
 - by default the episode ends at the first tracking failure, counted as `fall`. With
   `--keep-running-after-tracking-failure` it runs on: the tracking failure (`tracking_failure`, its time
-  and rule) and real falls (`fell`: head below 0.5 m for over 2 s) are reported separately (METRICS.md §1);
+  and rule) and real falls (`fell`: head below 0.5 m for over 2 s, or still down when the motion ends) are reported
+  separately (METRICS.md §1);
 - MPKPE, root-relative MPKPE, drift and strict success are computed on mjlab's 14 key bodies;
   velocity metrics are n/a (METRICS.md §3).
 

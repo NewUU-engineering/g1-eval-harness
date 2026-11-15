@@ -323,6 +323,8 @@ class SimulationEngine:
                 fall_time = phys["sim_time"]
                 break
 
+        if split is not None and down_steps and not fall_reason:
+            fall_reason, fall_time = "head_down", down_since  # still down when the motion ends
         if renderer is not None:
             renderer.close()
         r.restore_nominal()
