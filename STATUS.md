@@ -25,7 +25,7 @@
 | Motion-tracking policies | `harness/`, `METRICS.md` §3, `README.md` §3d | 2.0.0 | done; walking-policy results identical to v1.0.0 |
 | BeyondMimic adapter | `adapters/beyondmimic_adapter.py` | 2.0.0 | done, checked against mjlab and the ROS 2 stack on the LAFAN1 demo dance |
 | SONIC v1.1 adapter (encoder + decoder, mode `g1`) | `adapters/sonic_v1_1_adapter.py` | 2.0.0 | done, checked against NVIDIA's sim-to-sim on a tennis serve, a jump kick and their squat |
-| SONIC (ViT-H) adapter (1570-D deploy policy) | `adapters/sonic_adapter.py` | 2.0.0 | done, checked against `g1_tracker` on the LAFAN1 demo dance and a tennis serve |
+| SONIC (ViT-H) adapter (1570-D deploy policy) | `adapters/sonic_vith_adapter.py` | 2.0.0 | done, checked against `g1_tracker` on the LAFAN1 demo dance and a tennis serve |
 | Robot-model choice, default `ros2` | `assets/g1/build_ros2_model.py`, `--robot` | 2.0.0 | done; `--robot unitree_rl_gym` reproduces v1.0.0 |
 
 Reference results: `examples/sample_results/` (summary, per-trial logs, videos; v1 robot model).

@@ -12,7 +12,7 @@ from harness.types import JointCommand, RobotState
 CONTROL_HZ = 50.0
 
 
-class SonicAdapter(PolicyAdapter):
+class SonicVitHAdapter(PolicyAdapter):
     name = "sonic"
     uses_privileged_state = True  # base position
 

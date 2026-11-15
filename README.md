@@ -27,7 +27,7 @@ g1-eval-harness/
 │   ├── unitree_rl_gym_adapter.py   # working example (unitree_rl_gym pretrained G1)
 │   ├── beyondmimic_adapter.py  #   motion tracker: BeyondMimic (mjlab ONNX export)
 │   ├── sonic_v1_1_adapter.py   #   motion tracker: SONIC v1.1 (NVIDIA's release)
-│   ├── sonic_adapter.py        #   motion tracker: SONIC (ViT-H), run by ViT-H's g1_tracker
+│   ├── sonic_vith_adapter.py   #   motion tracker: SONIC (ViT-H), run by ViT-H's g1_tracker
 │   ├── template_adapter.py     #   copy this to start your own
 │   └── external/               #   policies that run in another process
 │       ├── protocol.py         #     standalone TCP protocol (copy into your env)
@@ -39,6 +39,7 @@ g1-eval-harness/
 │   └── policy_runtime.py       # TorchScript loader (torch, or numpy fallback)
 ├── assets/g1/                  # G1 models + meshes (§4)
 │   ├── g1_ros2_upstream.xml    #   ROS 2 stack's G1 (unitree_description 1.3.0, BSD)
+│   ├── NOTICE_unitree_description.txt  #   its source and license
 │   ├── build_ros2_model.py     #   -> g1_29dof_ros2.xml, the default model
 │   ├── g1_29dof_rev_1_0.xml    #   Unitree's G1 (unitree_rl_gym, BSD-3)
 │   ├── build_harness_model.py  #   -> g1_29dof_harness.xml, the v1 model
@@ -92,7 +93,7 @@ python evaluate.py --adapter adapters.sonic_v1_1_adapter:SonicV11Adapter \
     --set motion=motion.npz
 
 # SONIC (ViT-H)
-python evaluate.py --adapter adapters.sonic_adapter:SonicAdapter \
+python evaluate.py --adapter adapters.sonic_vith_adapter:SonicVitHAdapter \
     --checkpoint ViT-H-release/inputs/checkpoints/g1_tracker/model_step_020000_g1.onnx \
     --set tracker_root=ViT-H-release/g1_tracker --set motion=motion.npz
 ```
@@ -310,7 +311,7 @@ Each shipped adapter was compared with the policy's own sim-to-sim on the defaul
 | `sonic_v1_1_adapter.py` | NVIDIA's sim-to-sim: tennis serve (ViT-H motion) | finishes, as theirs does; joint error 0.139 vs 0.148 rad |
 | | same, jump kick (ViT-H motion) | fails at 1.0 s; theirs at 0.96 s |
 | | same, NVIDIA's squat example | finishes, as theirs does; joint error 0.102 vs 0.107 rad |
-| `sonic_adapter.py` (ViT-H) | ViT-H's `g1_tracker`: LAFAN1 demo dance | fails at the cartwheel, 106.7 s, as `g1_tracker` does |
+| `sonic_vith_adapter.py` | ViT-H's `g1_tracker`: LAFAN1 demo dance | fails at the cartwheel, 106.7 s, as `g1_tracker` does |
 | | same, tennis serve (GVHMR + GMR motion) | fails at 6.7 s; `g1_tracker` at 7.8 s |
 
 For SONIC v1.1, NVIDIA's sim-to-sim ran their deploy with TensorRT swapped for ONNX Runtime on CPU
