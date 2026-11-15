@@ -1,4 +1,4 @@
-"""SONIC deploy policy from ViT-H's g1_tracker. Inputs: --set tracker_root=... --set motion=motion.npz."""
+"""SONIC (ViT-H): ViT-H's fine-tune of SONIC, run as its g1_tracker runs it. Inputs: --set tracker_root=... --set motion=motion.npz."""
 import sys
 from collections import deque
 from pathlib import Path

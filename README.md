@@ -7,7 +7,8 @@ This fork adds motion-tracking support and a second robot model (below); the ori
 
 - **Motion-tracking policies** (BeyondMimic, SONIC): episodes as long as the motion, failure judged
   against the reference (BeyondMimic's rules), and MPKPE, root-relative MPKPE, drift and strict success.
-- **Adapters** for BeyondMimic (mjlab ONNX export) and SONIC (ViT-H's `g1_tracker`).
+- **Adapters** for BeyondMimic (mjlab ONNX export), SONIC v1.1 (NVIDIA's release) and SONIC (ViT-H)
+  (ViT-H's fine-tune, run by its `g1_tracker`).
 - **Two robot models**, default `ros2` (below). `--robot unitree_rl_gym` gives v1.0.0 results exactly.
 
 Status and open items: `STATUS.md`. Metric definitions: `METRICS.md` §3.
@@ -20,15 +21,26 @@ python evaluate.py --adapter adapters.beyondmimic_adapter:BeyondMimicAdapter --c
 python evaluate.py --adapter adapters.sonic_adapter:SonicAdapter \
     --checkpoint ViT-H-release/inputs/checkpoints/g1_tracker/model_step_020000_g1.onnx \
     --set tracker_root=ViT-H-release/g1_tracker --set motion=motion.npz
+python evaluate.py --adapter adapters.sonic_v1_1_adapter:SonicV11Adapter \
+    --checkpoint GR00T-WholeBodyControl/gear_sonic_deploy/policy/sonic_v1_1/model_decoder.onnx --set motion=motion.npz
 ```
 
 - **BeyondMimic:** an ONNX file exported by mjlab's tracking task (`Mjlab-Tracking-Flat-Unitree-G1`);
   the adapter reads the network, the reference motion and the gains from it. Files from older
   exporters lack `anchor_body_name`; re-export them.
-- **SONIC:** checkpoint and `g1_tracker` from [ViT-H](https://github.com/mileret/ViT-H-release)
+- **SONIC (ViT-H):** NVIDIA's SONIC fine-tuned by ViT-H's authors; checkpoint and `g1_tracker` from
+  [ViT-H](https://github.com/mileret/ViT-H-release)
   (`hf download eerrr1/ViT-H-checkpoints model_step_020000_g1.onnx --repo-type dataset`). The motion is
   a `g1_tracker` input `.npz`: `joint_pos` (T, 29, IsaacLab order, rad), `root_pos_w` (T, 3, z-up),
   `root_quat_w` (T, 4, wxyz), `body_pos_w` (T, 30, 3; zeros are fine) and `fps`.
+- **SONIC v1.1:** NVIDIA's [GEAR-SONIC](https://huggingface.co/nvidia/GEAR-SONIC) v1.1 encoder and
+  decoder, run as their C++ deploy (`g1_deploy_onnx_ref`) runs them in encoder mode `g1`: 10 future
+  frames at step 5 of joint positions and velocities, plus the anchor orientation relative to the
+  robot's heading. Joint order, gains, action scale, history and heading follow that code. Files:
+  `python download_from_hf.py --sonic-v1-1 --no-planner` in
+  [GR00T-WholeBodyControl](https://github.com/NVlabs/GR00T-WholeBodyControl) (revision `6733128a`:
+  encoder `fb97de22…8365bae`, decoder `34bae857…f39c24a`). Same motion `.npz` as SONIC (ViT-H).
+  `--set hold_s=…` holds the first frame before playback, as their deploy does before `T`.
 
 ### How a motion tracker is scored
 
@@ -61,13 +73,19 @@ Results depend on the model, so report it with every result (`summary.json → r
 | | `ros2` | `unitree_rl_gym` | Own evaluation |
 |---|---|---|---|
 | BeyondMimic, LAFAN1 dance | finishes | fails at 106.9 s (cartwheel) | mjlab: finishes 93%; ROS 2 stack: 5/5 |
-| SONIC, LAFAN1 dance | fails at 106.7 s | fails at 106.8 s | `g1_tracker`: fails at 106.7 s |
-| SONIC, tennis serve (GVHMR + GMR motion) | fails at 6.7 s | fails at 7.8 s | `g1_tracker`: fails at 7.8 s |
+| SONIC (ViT-H), LAFAN1 dance | fails at 106.7 s | fails at 106.8 s | `g1_tracker`: fails at 106.7 s |
+| SONIC (ViT-H), tennis serve (GVHMR + GMR motion) | fails at 6.7 s | fails at 7.8 s | `g1_tracker`: fails at 7.8 s |
+| SONIC v1.1, tennis serve (ViT-H motion) | finishes | – | NVIDIA's sim-to-sim: finishes; joint error 0.139 vs 0.148 rad |
+| SONIC v1.1, jump kick (ViT-H motion) | fails at 1.0 s | – | NVIDIA's sim-to-sim: fails at 0.96 s |
+| SONIC v1.1, NVIDIA's squat example | finishes | – | NVIDIA's sim-to-sim: finishes; joint error 0.102 vs 0.107 rad |
 | Example walking policy, flat-ground speed error | 0.03 m/s | 0.11 m/s | – |
 
 BeyondMimic also matches mjlab on pose error (r-MPKPE 0.035 vs 0.038 m) and joint error (0.082 vs
-0.084 rad). Both adapters read the true base position (`uses_privileged_state = True`); on the robot
-it comes from a state estimator.
+0.084 rad). For SONIC v1.1, NVIDIA's sim-to-sim ran their deploy with TensorRT swapped for ONNX
+Runtime on CPU (same networks): given the robot states it logged, the adapter builds the same encoder
+and decoder inputs on every tick (within 5e-6), and pelvis height stays within 2 cm of theirs.
+BeyondMimic and SONIC (ViT-H) read the true base position (`uses_privileged_state = True`; on the
+robot it comes from a state estimator); SONIC v1.1 reads only the IMU and joints, as on the robot.
 
 ---
 
@@ -96,7 +114,8 @@ g1-eval-harness/
 │   ├── base.py                 #   PolicyAdapter interface
 │   ├── unitree_rl_gym_adapter.py   # working example (unitree_rl_gym pretrained G1)
 │   ├── beyondmimic_adapter.py  #   motion tracker: BeyondMimic (mjlab ONNX export)
-│   ├── sonic_adapter.py        #   motion tracker: SONIC (ViT-H g1_tracker)
+│   ├── sonic_adapter.py        #   motion tracker: SONIC (ViT-H), ViT-H's g1_tracker
+│   ├── sonic_v1_1_adapter.py   #   motion tracker: SONIC v1.1, NVIDIA's release
 │   ├── template_adapter.py     #   copy this to start your own
 │   └── external/               #   policies that run in another process
 │       ├── protocol.py         #     standalone TCP protocol (copy into your env)

@@ -13,8 +13,8 @@
 | Tests | `tests/` (`python -m pytest -q tests`) | 22/22 pass (15 from v1.0.0 + 7 tracking) |
 | **v2.0.0:** motion-tracking policies (motion-length episodes, failure against the reference, MPKPE / root-relative MPKPE / drift / strict success) | `harness/`, `METRICS.md` §3, `README.md` (top) | done; walking-policy results identical to v1.0.0 |
 | **v2.0.0:** BeyondMimic adapter (mjlab ONNX export) | `adapters/beyondmimic_adapter.py` | done, checked against mjlab's evaluation on the LAFAN1 demo dance |
-| **v2.0.0:** SONIC adapter (ViT-H `g1_tracker`, 1570-D deploy policy) | `adapters/sonic_adapter.py` | done, checked against `g1_tracker` on a tennis serve |
-
+| **v2.0.0:** SONIC (ViT-H) adapter (ViT-H's fine-tune of SONIC, its `g1_tracker`, 1570-D deploy policy) | `adapters/sonic_adapter.py` | done, checked against `g1_tracker` on a tennis serve |
+| **v2.0.0:** SONIC v1.1 adapter (NVIDIA's release, encoder + decoder, mode `g1`) | `adapters/sonic_v1_1_adapter.py` | done, checked against NVIDIA's sim-to-sim on a tennis serve, a jump kick and their squat |
 | **v2.0.0:** robot-model choice, default `ros2` (ROS 2 stack's G1) | `assets/g1/build_ros2_model.py`, `--robot` | done; `--robot unitree_rl_gym` reproduces v1.0.0 |
 
 Reference results: `examples/sample_results/` (summary, per-trial logs, videos; v1 robot model).
@@ -45,8 +45,8 @@ What was wrong with the first version and what changed: `FIXES.md`.
    about 4.3 s are never pushed. `stand_still` is the same as `flat_nominal` for motion trackers
    (they have no velocity command).
 6. **Privileged state in the tracking adapters (v2.0.0).** BeyondMimic (anchor position, base linear
-   velocity) and SONIC (base position) read the true base state; on the robot it comes from a state
-   estimator. Both adapters set `uses_privileged_state = True`. An estimator-noise scenario would
+   velocity) and SONIC (ViT-H) (base position) read the true base state; on the robot it comes from a
+   state estimator. Both adapters set `uses_privileged_state = True`; SONIC v1.1 doesn't need it. An estimator-noise scenario would
    make this closer to the robot.
 7. **Starting state of motion trackers (v2.0.0).** The robot starts at rest on the reference's first
    frame (plus the seeded joint noise). mjlab and `g1_tracker` also start it with the reference
