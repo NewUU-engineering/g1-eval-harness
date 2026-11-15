@@ -13,7 +13,8 @@ from typing import Dict, List, Optional
 import mujoco
 import numpy as np
 
-from harness.config import HarnessConfig, G1_REFERENCE_GAINS
+from harness.config import (HarnessConfig, G1_REFERENCE_GAINS, HEAD_LIDAR_IN_TORSO, REAL_FALL_HEAD_HEIGHT_M,
+                            REAL_FALL_TIME_S)
 from harness.robot import RobotModel
 from harness.scenarios import Scenario
 from harness.metrics import TrialMetrics, compute_metrics
@@ -63,6 +64,8 @@ class SimulationEngine:
         self.anchor_index = list(cfg.tracking_key_bodies).index(cfg.tracking_anchor_body)
         self.ee_index = np.array([list(cfg.tracking_key_bodies).index(n) for n in cfg.tracking_end_effector_bodies])
         self.ref_data = mujoco.MjData(self.model)
+        self.torso_body = body("torso_link")
+        self.head_offset = np.array(HEAD_LIDAR_IN_TORSO)
 
     # ------------------------------------------------------------------ helpers
     def _state(self, d: mujoco.MjData, t0: float, command: np.ndarray, last_tau: np.ndarray) -> RobotState:
@@ -97,6 +100,11 @@ class SimulationEngine:
                 return f"ground_contact:{r.body_name(b)}"
         return ""
 
+    def _head_height(self, d: mujoco.MjData) -> float:
+        """Height of the head lidar (mid360), the point the ROS 2 analysis measures."""
+        t = self.torso_body
+        return float(d.xpos[t, 2] + d.xmat[t].reshape(3, 3)[2] @ self.head_offset)
+
     def _bodies(self, d: mujoco.MjData):
         return d.xpos[self.key_bodies].copy(), d.xquat[self.key_bodies[self.anchor_index]].copy()
 
@@ -122,7 +130,8 @@ class SimulationEngine:
 
     # ------------------------------------------------------------------ trial
     def run_trial(self, adapter, scenario: Scenario, seed: int, command: np.ndarray,
-                  record_video: bool = False) -> TrialResult:
+                  record_video: bool = False, keep_running_after_tracking_failure: bool = False) -> TrialResult:
+        """keep_running_after_tracking_failure: a motion tracker runs on until the motion ends or its head stays down."""
         cfg, r, m = self.cfg, self.robot, self.model
         if adapter.command_rate not in ("control", "physics"):
             raise ValueError("adapter.command_rate must be 'control' or 'physics'")
@@ -167,6 +176,8 @@ class SimulationEngine:
         # ---- motion tracking ----
         ref0 = adapter.reference(0.0)
         tracking = ref0 is not None and "root_pos" in ref0 and "root_quat" in ref0
+        split = {"tracking_failure_reason": "", "tracking_failure_time_s": None, "tracking_failure_steps": 0} \
+            if tracking and keep_running_after_tracking_failure else None
         if tracking and "q" not in ref0:
             r.restore_nominal()
             raise ValueError("adapter.reference() gives a root pose but no joint angles 'q'.")
@@ -196,9 +207,11 @@ class SimulationEngine:
                                                "yaw_rate", "base_pos", "base_quat", "tau", "latency_ms",
                                                "q_ref", "q_ref_mask", "body_pos", "anchor_quat",
                                                "anchor_pos_start", "anchor_quat_start",
-                                               "ref_body_pos", "ref_anchor_quat")}
+                                               "ref_body_pos", "ref_anchor_quat", "head_height")}
         phys = {"steps": 0, "power_sum": 0.0, "tau_sq_sum": 0.0, "sat_steps": 0, "sat_joint_steps": 0, "sim_time": 0.0}
         fall_reason, fall_time = "", None
+        down_steps, down_since = 0, None
+        fall_steps = int(round(REAL_FALL_TIME_S / cfg.control_dt))
         last_tau = np.zeros(29)
         frames: List[np.ndarray] = []
         cmd_obj: Optional[JointCommand] = None
@@ -282,6 +295,8 @@ class SimulationEngine:
                 rows["body_pos"].append(body); rows["anchor_quat"].append(anchor_quat)
                 rows["anchor_pos_start"].append(anchor_start[0]); rows["anchor_quat_start"].append(anchor_start[1])
                 rows["ref_body_pos"].append(ref_body); rows["ref_anchor_quat"].append(ref_anchor_quat)
+            if split is not None:
+                rows["head_height"].append(self._head_height(d))
 
             if renderer is not None and k % cfg.video_stride == 0:
                 renderer.update_scene(d, camera=cam)
@@ -290,8 +305,20 @@ class SimulationEngine:
             if fall_reason:
                 fall_time = phys["sim_time"]
                 break
-            fall_reason = (self._check_tracking_failure(body, anchor_quat, ref_body, ref_anchor_quat)
-                           if tracking else self._check_fall(d))
+            if split is not None:
+                failure = self._check_tracking_failure(body, anchor_quat, ref_body, ref_anchor_quat)
+                if failure and not split["tracking_failure_reason"]:
+                    split.update(tracking_failure_reason=failure, tracking_failure_time_s=phys["sim_time"],
+                                 tracking_failure_steps=len(rows["t"]))
+                down_steps = down_steps + 1 if rows["head_height"][-1] < REAL_FALL_HEAD_HEIGHT_M else 0
+                if down_steps == 1:
+                    down_since = phys["sim_time"]
+                if down_steps > fall_steps:
+                    fall_reason, fall_time = "head_down", down_since
+                    break
+            else:
+                fall_reason = (self._check_tracking_failure(body, anchor_quat, ref_body, ref_anchor_quat)
+                               if tracking else self._check_fall(d))
             if fall_reason:
                 fall_time = phys["sim_time"]
                 break
@@ -303,11 +330,15 @@ class SimulationEngine:
         log = {k: np.asarray(v) for k, v in rows.items() if len(v)}
         if "q_ref" in log and len(log["q_ref"]) != len(log["t"]):
             del log["q_ref"], log["q_ref_mask"]  # reference must be given every step or not at all
+        if split is not None:
+            split.update(fell_reason=fall_reason, fell_time_s=fall_time)
+            if split["tracking_failure_reason"]:
+                fall_reason, fall_time = split["tracking_failure_reason"], split["tracking_failure_time_s"]
         metrics = compute_metrics(
             log, control_dt=cfg.control_dt, duration_s=duration_s, warmup_s=cfg.tracking_warmup_s, window_s=cfg.tracking_window_s,
             anchor_index=self.anchor_index, strict_mpkpe_m=cfg.tracking_strict_mpkpe_m,
             q_lower=r.q_lower, q_upper=r.q_upper, soft_fraction=cfg.soft_joint_limit_fraction,
-            fall_reason=fall_reason, fall_time=fall_time, phys=phys)
+            fall_reason=fall_reason, fall_time=fall_time, phys=phys, split=split)
         perturb = {"command": command.tolist(), "friction": scenario.friction,
                    "pushes": [{"start_s": p["start"], "duration_s": p["end"] - p["start"],
                                "force_xyz": p["force"].tolist()} for p in pushes],

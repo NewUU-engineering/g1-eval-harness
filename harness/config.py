@@ -50,6 +50,12 @@ G1_REFERENCE_GAINS.update({
 })
 
 
+# real fall with --keep-running-after-tracking-failure: head below this for this long
+REAL_FALL_HEAD_HEIGHT_M = 0.5
+REAL_FALL_TIME_S = 2.0
+HEAD_LIDAR_IN_TORSO = (0.0002835, 0.00003, 0.41618)  # ros2 model's mid360 site in torso_link
+
+
 @dataclass(frozen=True)
 class HarnessConfig:
     # ---- Simulation ----

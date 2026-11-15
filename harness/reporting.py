@@ -28,6 +28,12 @@ TABLE_COLUMNS = [
     ("joint_limit_violation_rate", "q-limit viol", "{:.1%}"),
     ("torque_saturation_rate", "tau sat", "{:.1%}"),
 ]
+# --keep-running-after-tracking-failure: `fall` is then the first failure of either kind.
+SPLIT_COLUMNS = [
+    ("fall", "failed", "{:.0%}"),
+    ("tracking_failure", "track fail", "{:.0%}"),
+    ("fell", "real falls", "{:.0%}"),
+] + TABLE_COLUMNS[1:7] + [("pre_failure_mpkpe_m", "MPKPE pre-fail m", "{:.3f}")] + TABLE_COLUMNS[7:]
 
 
 def save_video(frames: List[np.ndarray], path: str, fps: int) -> bool:
@@ -68,16 +74,17 @@ def _fmt(v, fmt):
 
 
 def markdown_table(aggregates: Dict[str, Dict]) -> str:
-    head = "| scenario | " + " | ".join(c[1] for c in TABLE_COLUMNS) + " |"
-    sep = "|---" * (len(TABLE_COLUMNS) + 1) + "|"
+    columns = SPLIT_COLUMNS if any("fell" in agg for agg in aggregates.values()) else TABLE_COLUMNS
+    head = "| scenario | " + " | ".join(c[1] for c in columns) + " |"
+    sep = "|---" * (len(columns) + 1) + "|"
     lines = [head, sep]
     for scen, agg in aggregates.items():
         cells = []
-        for key, _, fmt in TABLE_COLUMNS:
+        for key, _, fmt in columns:
             a = agg.get(key)
             if a is None or a["mean"] is None:
                 cells.append("n/a")
-            elif key in ("fall",):
+            elif key in ("fall", "tracking_failure", "fell"):
                 cells.append(_fmt(a["mean"], fmt))
             else:
                 cells.append(_fmt(a["mean"], fmt) + (f" ± {_fmt(a['std'], fmt)}" if a["n"] > 1 else ""))
@@ -94,7 +101,11 @@ def write_summary(out_dir: str, summary: Dict):
           f"control {1 / summary['harness']['control_dt']:.0f} Hz, gains from **{summary['harness']['gains_mode']}**",
           f"- seeds: {summary['seeds']}, command (vx, vy, yaw_rate): {summary['command']}", "",
           "Mean ± std over seeds. Velocity metrics exclude the first "
-          f"{summary['harness']['tracking_warmup_s']} s and are n/a if the robot fell before that.", "",
-          markdown_table(summary["aggregates"]), ""]
+          f"{summary['harness']['tracking_warmup_s']} s and are n/a if the robot fell before that.", ""]
+    if summary["harness"].get("keep_running_after_tracking_failure"):
+        md += ["Motion trackers kept running after a tracking failure. `failed` = tracking failure or fall, "
+               "`real falls` = head below 0.5 m for over 2 s; tracking metrics cover the whole run, "
+               "`pre-fail` only up to the first tracking failure.", ""]
+    md += [markdown_table(summary["aggregates"]), ""]
     with open(os.path.join(out_dir, "summary.md"), "w") as f:
         f.write("\n".join(md))

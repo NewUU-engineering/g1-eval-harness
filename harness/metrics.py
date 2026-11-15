@@ -51,10 +51,22 @@ class TrialMetrics:
     max_r_mpkpe_m: float = float("nan")
     drift_mean_m: float = float("nan")     # anchor xy distance from the reference
     drift_max_m: float = float("nan")
+    # Only with --keep-running-after-tracking-failure (None and left out of to_dict otherwise).
+    tracking_failure: Optional[bool] = None
+    tracking_failure_reason: Optional[str] = None
+    tracking_failure_time_s: Optional[float] = None
+    fell: Optional[bool] = None
+    fell_reason: Optional[str] = None
+    fell_time_s: Optional[float] = None
+    pre_failure_mpkpe_m: Optional[float] = None
+    pre_failure_r_mpkpe_m: Optional[float] = None
+    pre_failure_joint_pos_tracking_mae: Optional[float] = None
 
     def to_dict(self) -> Dict:
         out = {}
         for k, v in asdict(self).items():
+            if v is None:
+                continue
             if isinstance(v, (bool, np.bool_)):
                 out[k] = bool(v)
             elif isinstance(v, (int, np.integer)):
@@ -67,7 +79,8 @@ class TrialMetrics:
 
 
 # Metrics where lower is better / higher is better (used by summary tables).
-LOWER_IS_BETTER = ["joint_pos_tracking_mae", "mpkpe_m", "max_mpkpe_m", "r_mpkpe_m", "max_r_mpkpe_m", "drift_mean_m", "drift_max_m",
+LOWER_IS_BETTER = ["joint_pos_tracking_mae", "mpkpe_m", "pre_failure_mpkpe_m", "pre_failure_r_mpkpe_m",
+                   "pre_failure_joint_pos_tracking_mae", "max_mpkpe_m", "r_mpkpe_m", "max_r_mpkpe_m", "drift_mean_m", "drift_max_m",
                    "lin_vel_xy_rmse", "yaw_rate_rmse", "lin_vel_xy_rmse_instant", "yaw_rate_rmse_instant", "joint_pos_tracking_rmse", "action_rate_rms",
                    "joint_acc_rms", "joint_jerk_rms", "mean_mech_power_w", "torque_rms",
                    "joint_limit_violation_rate", "near_joint_limit_rate", "torque_saturation_rate"]
@@ -122,11 +135,51 @@ def body_tracking_metrics(log: Dict[str, np.ndarray], anchor_index: int, strict_
     }
 
 
+def _joint_tracking(log: Dict[str, np.ndarray]):
+    """(RMSE, MAE) of q against q_ref over masked joints; NaN without a reference."""
+    if "q_ref" in log and log["q_ref"].size:
+        m = log["q_ref_mask"].astype(bool)
+        err = (log["q"] - log["q_ref"])[m]
+        return _rms(err), float(np.mean(np.abs(err)))
+    return float("nan"), float("nan")
+
+
 def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s: float,
                     warmup_s: float, window_s: float, q_lower: np.ndarray, q_upper: np.ndarray,
                     soft_fraction: float, fall_reason: str, fall_time: Optional[float],
                     phys: Dict[str, float], anchor_index: int = 7,
-                    strict_mpkpe_m: float = 0.15) -> TrialMetrics:
+                    strict_mpkpe_m: float = 0.15, split: Optional[Dict] = None) -> TrialMetrics:
+    """With `split` (run kept going after a tracking failure), fall_reason/fall_time are the first failure of either kind."""
+    m = _compute_metrics(log, control_dt=control_dt, duration_s=duration_s, warmup_s=warmup_s, window_s=window_s,
+                         q_lower=q_lower, q_upper=q_upper, soft_fraction=soft_fraction, fall_reason=fall_reason,
+                         fall_time=fall_time, phys=phys, anchor_index=anchor_index, strict_mpkpe_m=strict_mpkpe_m)
+    if split is None:
+        return m
+    nan = float("nan")
+    m.tracking_failure = split["tracking_failure_reason"] != ""
+    m.tracking_failure_reason = split["tracking_failure_reason"]
+    m.tracking_failure_time_s = split["tracking_failure_time_s"] if m.tracking_failure else nan
+    m.fell = split["fell_reason"] != ""
+    m.fell_reason = split["fell_reason"]
+    m.fell_time_s = split["fell_time_s"] if m.fell else nan
+    n = len(log.get("t", []))
+    if n:
+        if m.fall and fall_time is not None:
+            m.survival_fraction = float(min(1.0, fall_time / duration_s))
+        pre = {k: v[:split["tracking_failure_steps"] or n] for k, v in log.items()}
+        body = body_tracking_metrics(pre, anchor_index, strict_mpkpe_m, m.fall)
+        m.pre_failure_mpkpe_m = body.get("mpkpe_m", nan)
+        m.pre_failure_r_mpkpe_m = body.get("r_mpkpe_m", nan)
+        m.pre_failure_joint_pos_tracking_mae = _joint_tracking(pre)[1]
+    else:
+        m.pre_failure_mpkpe_m = m.pre_failure_r_mpkpe_m = m.pre_failure_joint_pos_tracking_mae = nan
+    return m
+
+
+def _compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s: float,
+                     warmup_s: float, window_s: float, q_lower: np.ndarray, q_upper: np.ndarray,
+                     soft_fraction: float, fall_reason: str, fall_time: Optional[float],
+                     phys: Dict[str, float], anchor_index: int, strict_mpkpe_m: float) -> TrialMetrics:
     nan = float("nan")
     if len(log.get("t", [])) == 0:
         # Failed before the first control step completed (e.g. NaN action at t=0).
@@ -160,12 +213,7 @@ def compute_metrics(log: Dict[str, np.ndarray], *, control_dt: float, duration_s
             yaw_rmse = _rms(c_avg[:, 2] - w_avg)
 
     # --- motion tracking (optional) ---
-    if "q_ref" in log and log["q_ref"].size:
-        m = log["q_ref_mask"].astype(bool)
-        err = (log["q"] - log["q_ref"])[m]
-        track, track_mae = _rms(err), float(np.mean(np.abs(err)))
-    else:
-        track = track_mae = float("nan")
+    track, track_mae = _joint_tracking(log)
 
     # --- smoothness (control rate) ---
     q_tgt, dq = log["q_target"], log["dq"]

@@ -6,7 +6,8 @@ import pytest
 from adapters.base import PolicyAdapter
 from harness.config import HarnessConfig
 from harness.engine import SimulationEngine
-from harness.metrics import body_tracking_metrics
+from harness.metrics import aggregate, body_tracking_metrics
+from harness.reporting import markdown_table
 from harness.scenarios import TEST_SCENARIOS
 from harness.types import JointCommand
 from tests.test_harness import STIFF_KD, STIFF_KP
@@ -62,6 +63,66 @@ def test_reference_far_above_robot_fails_on_anchor_height(engine):
     res = engine.run_trial(adapter, TEST_SCENARIOS["flat_nominal"], 0, np.zeros(3))
     assert res.metrics.fall and res.metrics.fall_reason == "tracking:anchor_height"
     assert res.metrics.time_to_fall_s < 0.1
+
+
+SPLIT_KEYS = {"tracking_failure", "tracking_failure_reason", "tracking_failure_time_s", "fell", "fell_reason",
+              "fell_time_s", "pre_failure_mpkpe_m", "pre_failure_r_mpkpe_m", "pre_failure_joint_pos_tracking_mae"}
+
+
+def rising_reference(duration=2.0):
+    """Robot stands still while the reference is 0.5 m higher: tracking fails at once, the robot never falls."""
+    adapter = HoldPoseTracker(duration=duration)
+    adapter.reference = lambda t: {"q": np.zeros(29), "root_pos": np.array([0.0, 0.0, 0.8 + (0.5 if t > 0 else 0)]),
+                                   "root_quat": np.array([1.0, 0.0, 0.0, 0.0])}
+    return adapter
+
+
+def test_default_still_ends_at_tracking_failure(engine):
+    flat = TEST_SCENARIOS["flat_nominal"]
+    a = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
+    b = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), keep_running_after_tracking_failure=False).metrics
+    da, db = a.to_dict(), b.to_dict()
+    da.pop("mean_policy_latency_ms"); db.pop("mean_policy_latency_ms")
+    assert da == db and not SPLIT_KEYS & set(da)
+    assert a.fall and a.fall_reason == "tracking:anchor_height" and a.sim_time_s == a.time_to_fall_s
+    assert markdown_table({"flat_nominal": aggregate({"seed_0": da})}).startswith("| scenario | falls | survival |")
+
+
+def test_keep_running_separates_tracking_failure_from_fall(engine):
+    flat = TEST_SCENARIOS["flat_nominal"]
+    default = engine.run_trial(rising_reference(), flat, 0, np.zeros(3)).metrics
+    m = engine.run_trial(rising_reference(), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True).metrics
+    assert m.tracking_failure and m.tracking_failure_reason == "tracking:anchor_height"
+    assert m.tracking_failure_time_s == default.time_to_fall_s
+    assert not m.fell and m.fell_reason == "" and np.isnan(m.fell_time_s)
+    assert m.sim_time_s == pytest.approx(2.0, abs=0.03)       # ran the whole motion
+    for k in ("fall", "fall_reason", "time_to_fall_s", "survival_fraction", "success_strict"):
+        assert getattr(m, k) == getattr(default, k), k
+    assert m.pre_failure_mpkpe_m == pytest.approx(default.mpkpe_m)
+    assert m.pre_failure_joint_pos_tracking_mae == pytest.approx(default.joint_pos_tracking_mae)
+    assert SPLIT_KEYS <= set(m.to_dict())
+    assert "| failed | track fail | real falls |" in markdown_table({"flat_nominal": aggregate({"seed_0": m.to_dict()})})
+
+
+def limp(duration):
+    adapter = HoldPoseTracker(duration=duration)
+    adapter.act = lambda state: JointCommand(q=np.zeros(29), kp=np.zeros(29), kd=np.zeros(29))
+    return adapter
+
+
+def test_real_fall_is_head_down_for_over_two_seconds(engine):
+    flat = TEST_SCENARIOS["flat_nominal"]
+    res = engine.run_trial(limp(4.0), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True)
+    m = res.metrics
+    assert m.fell and m.fell_reason == "head_down"
+    assert m.sim_time_s - m.fell_time_s == pytest.approx(2.0, abs=1e-6)  # ends 2 s after the head went down
+    assert res.log["head_height"][-1] < 0.5
+    assert m.tracking_failure and m.tracking_failure_time_s <= m.fell_time_s
+    assert m.fall_reason == m.tracking_failure_reason
+
+    res = engine.run_trial(limp(2.0), flat, 0, np.zeros(3), keep_running_after_tracking_failure=True)
+    assert res.log["head_height"].min() < 0.5 and res.log["base_pos"][:, 2].min() < 0.4
+    assert not res.metrics.fell                               # down, but for less than 2 s
 
 
 def test_spawn_quaternion_is_normalised(engine):

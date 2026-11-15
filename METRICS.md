@@ -18,6 +18,35 @@ Notation: control step k (50 Hz, Δt = 0.02 s), physics step i (500 Hz). Joint a
 
 In aggregates, the mean of `fall` is the **fall rate** over seeds.
 
+### Tracking failure vs real fall (`--keep-running-after-tracking-failure`)
+
+By default a motion tracker's episode ends at its first tracking failure (§3), and that is counted as
+`fall`. A tracking failure is not a fall: a policy can lose the reference and stay on its feet. With this
+option the first tracking failure is recorded and the episode runs on until the motion ends or the robot
+**really falls**: `head_down`, the head below 0.5 m for longer than 2 s, as in our ROS 2 analysis
+(`analyze_ros2.py`). The head is the `mid360` lidar site of the `ros2` model (the same point, `torso_link`
++ (0.0003, 0, 0.416) m, on `unitree_rl_gym`); it stands at 1.25 m. The trial ends once the head has been
+down for 2 s; `fell_time_s` is when it went down. Pelvis height, tilt and ground contact are not checked,
+since motions may crouch, kneel or cartwheel on purpose (the LAFAN1 cartwheel tilts the pelvis to 149°, with
+the head below 0.5 m for 0.56 s). `sim_unstable` and `invalid_action` still end the trial at once.
+
+`fall`, `fall_reason`, `time_to_fall_s`, `survival_fraction` and `success_strict` keep their meaning: the
+first failure of either kind (same values as without the option, unless the robot really falls before any
+tracking rule fires). Added per trial:
+
+| key | unit | definition |
+|---|---|---|
+| `tracking_failure` | bool | a tracking rule (§3) fired |
+| `tracking_failure_reason`, `tracking_failure_time_s` | text, s | the first one, and its sim time |
+| `fell` | bool | real fall, as above |
+| `fell_reason`, `fell_time_s` | text, s | `head_down`, `sim_unstable` or `invalid_action`, and its sim time (for `head_down`, when the head went down) |
+| `pre_failure_mpkpe_m`, `pre_failure_r_mpkpe_m` | m | §3 metrics up to the first tracking failure (whole run if none); same as without the option |
+| `pre_failure_joint_pos_tracking_mae` | rad | same for `joint_pos_tracking_mae` |
+
+All other metrics, including `mpkpe_m`, `r_mpkpe_m` and the joint errors, cover the whole run. Means over
+seeds: `tracking_failure` = **tracking-failure rate**, `fell` = **real-fall rate**, 1 − `fall` = success
+rate. Without the option these fields are absent and outputs are unchanged; other policies are unaffected.
+
 ## 2. Velocity tracking
 
 Measured only for t ≥ 1.0 s (the robot starts from rest) and only while upright.
@@ -47,8 +76,9 @@ Only computed if the adapter implements `reference(t)` (BeyondMimic, SONIC, any 
 | `joint_pos_tracking_rmse` | rad | sqrt(mean over steps and masked joints of (q − q_ref)²) |
 | `joint_pos_tracking_mae` | rad | mean over steps and masked joints of \|q − q_ref\| (the joint error we report for mjlab runs) |
 
-If the reference also has a root pose, the policy is a **motion tracker**. Failure is then judged
-against the reference (`fall_reason` = `tracking:anchor_height`, `tracking:anchor_orientation` or
+If the reference also has a root pose, the policy is a **motion tracker**. Failure, which ends the
+episode unless `--keep-running-after-tracking-failure` is set (§1), is then judged against the reference
+(`fall_reason` = `tracking:anchor_height`, `tracking:anchor_orientation` or
 `tracking:end_effector_height`, thresholds in `harness/config.py`, same as BeyondMimic / mjlab), and the
 14 key bodies (`tracking_key_bodies`, mjlab's set) of robot and reference are compared every control
 step (reference at the start of the step, robot after it, as in mjlab's reward). The reference is posed

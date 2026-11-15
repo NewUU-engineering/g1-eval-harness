@@ -27,7 +27,8 @@ sys.path.insert(0, REPO_ROOT)
 
 import numpy as np  # noqa: E402
 
-from harness.config import DEFAULT_ROBOT, HARNESS_VERSION, ROBOT_MODELS, HarnessConfig  # noqa: E402
+from harness.config import (DEFAULT_ROBOT, HARNESS_VERSION, REAL_FALL_HEAD_HEIGHT_M, REAL_FALL_TIME_S,  # noqa: E402
+                            ROBOT_MODELS, HarnessConfig)
 from harness.engine import SimulationEngine  # noqa: E402
 from harness.metrics import aggregate  # noqa: E402
 from harness.reporting import save_trial_log, save_video, write_summary, markdown_table  # noqa: E402
@@ -105,6 +106,9 @@ def main():
     ap.add_argument("--no-video", action="store_true")
     ap.add_argument("--video-all-seeds", action="store_true")
     ap.add_argument("--list-scenarios", action="store_true")
+    ap.add_argument("--keep-running-after-tracking-failure", action="store_true",
+                    help="motion trackers: record the first tracking failure but keep running until the motion "
+                         "ends or the robot really falls (head below 0.5 m for over 2 s); see METRICS.md")
     args = ap.parse_args()
 
     if args.list_scenarios:
@@ -144,12 +148,17 @@ def main():
             trials[scen_name], perturbations[scen_name] = {}, {}
             for i, seed in enumerate(args.seeds):
                 record = (not args.no_video) and (i == 0 or args.video_all_seeds)
-                res = engine.run_trial(adapter, scen, seed, command, record_video=record)
+                res = engine.run_trial(adapter, scen, seed, command, record_video=record,
+                                       keep_running_after_tracking_failure=args.keep_running_after_tracking_failure)
                 m = res.metrics
                 trials[scen_name][f"seed_{seed}"] = m.to_dict()
                 perturbations[scen_name][f"seed_{seed}"] = res.perturbations
                 save_trial_log(res.log, os.path.join(out, "logs", f"{scen_name}_seed{seed}.npz"))
                 status = f"FELL ({m.fall_reason} @ {m.time_to_fall_s:.2f}s)" if m.fall else "ok"
+                if m.fell is not None:
+                    status = (f"track-fail ({m.tracking_failure_reason} @ {m.tracking_failure_time_s:.2f}s)"
+                              if m.tracking_failure else "tracking ok") + ", " + \
+                             (f"FELL ({m.fell_reason} @ {m.fell_time_s:.2f}s)" if m.fell else "no fall")
                 if np.isfinite(m.mpkpe_m):  # motion tracker
                     score = f"MPKPE {m.mpkpe_m:6.3f}"
                 else:
@@ -184,6 +193,9 @@ def main():
         "perturbations": perturbations,
         "wall_time_s": round(time.time() - t_start, 1),
     }
+    if args.keep_running_after_tracking_failure:
+        summary["harness"].update(keep_running_after_tracking_failure=True,
+                                  real_fall_head_height_m=REAL_FALL_HEAD_HEIGHT_M, real_fall_time_s=REAL_FALL_TIME_S)
     write_summary(out, summary)
     print("\n" + markdown_table(aggregates))
     print(f"\n[HARNESS] done in {summary['wall_time_s']} s -> {out}/summary.json, summary.md\n")
