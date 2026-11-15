@@ -312,7 +312,7 @@ Each shipped adapter was compared with the policy's own sim-to-sim on the defaul
 |---|---|---|
 | `unitree_rl_gym_adapter.py` (walking) | unitree_rl_gym's `deploy/deploy_mujoco` | reproduces it (DESIGN.md §1) |
 | `beyondmimic_adapter.py` | mjlab's evaluation, LAFAN1 demo dance | finishes, as 93 % of mjlab's runs do; pose error (r-MPKPE) 3.5 vs 3.8 cm; joint error 0.082 vs 0.084 rad |
-| | the ROS 2 deploy stack, same dance | finishes, as the stack does (5/5) |
+| | the ROS 2 deploy stack, same dance | finishes, as the stack does (10/10 runs) |
 | `sonic_v1_1_adapter.py` | NVIDIA's sim-to-sim: tennis serve (ViT-H motion) | finishes, as theirs does; joint error 0.139 vs 0.148 rad |
 | | same, jump kick (ViT-H motion) | fails at 1.0 s; theirs at 0.96 s |
 | | same, NVIDIA's squat example | finishes, as theirs does; joint error 0.102 vs 0.107 rad |
