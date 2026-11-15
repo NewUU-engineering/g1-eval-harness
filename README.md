@@ -11,6 +11,10 @@ from different policies can be compared directly.
 The harness owns everything that must stay identical. Each policy owner writes
 one small **adapter** that translates between the harness and their policy.
 
+The harness tells the two kinds apart from the adapter: if `reference(t)` returns the pelvis
+position and orientation, the policy is scored as a motion tracker (§3d); otherwise as a walking
+policy. Each run prints `policy type: ...` and records it in `summary.json`.
+
 ```
 g1-eval-harness/
 ├── evaluate.py                 # the one command
@@ -24,7 +28,7 @@ g1-eval-harness/
 │   └── types.py                #   RobotState in, JointCommand out (LowState / LowCmd)
 ├── adapters/                   # ONE FILE PER POLICY
 │   ├── base.py                 #   PolicyAdapter interface
-│   ├── unitree_rl_gym_adapter.py   # working example (unitree_rl_gym pretrained G1)
+│   ├── unitree_rl_gym_adapter.py   # walking policy: unitree_rl_gym pretrained G1 (example)
 │   ├── beyondmimic_adapter.py  #   motion tracker: BeyondMimic (mjlab ONNX export)
 │   ├── sonic_v1_1_adapter.py   #   motion tracker: SONIC v1.1 (NVIDIA's release)
 │   ├── sonic_vith_adapter.py   #   motion tracker: SONIC (ViT-H), run by ViT-H's g1_tracker

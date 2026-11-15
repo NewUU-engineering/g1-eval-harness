@@ -29,7 +29,7 @@ import numpy as np  # noqa: E402
 
 from harness.config import (DEFAULT_ROBOT, HARNESS_VERSION, REAL_FALL_HEAD_HEIGHT_M, REAL_FALL_TIME_S,  # noqa: E402
                             ROBOT_MODELS, HarnessConfig)
-from harness.engine import SimulationEngine  # noqa: E402
+from harness.engine import SimulationEngine, is_motion_tracker  # noqa: E402
 from harness.metrics import aggregate  # noqa: E402
 from harness.reporting import save_trial_log, save_video, write_summary, markdown_table  # noqa: E402
 from harness.scenarios import TEST_SCENARIOS, DEFAULT_SCENARIOS  # noqa: E402
@@ -139,6 +139,9 @@ def main():
     print(f"\n[HARNESS {HARNESS_VERSION}] policy={name}  scenarios={len(args.scenarios)}  seeds={args.seeds}")
     print(f"  physics {1/cfg.physics_dt:.0f} Hz | control {1/cfg.control_dt:.0f} Hz | gains: {cfg.gains_mode} | cmd {command.tolist()}")
     print(f"  robot model: {args.robot} ({os.path.basename(cfg.model_xml)})")
+    tracker = is_motion_tracker(adapter.reference(0.0))
+    print("  policy type: " + ("motion tracker (reference(t) has a root pose)" if tracker
+                               else "walking (no root pose in reference(t))"))
     print(f"  output -> {out}\n")
 
     trials, aggregates, perturbations = {}, {}, {}
@@ -178,7 +181,7 @@ def main():
         "created": dt.datetime.now().isoformat(timespec="seconds"),
         "harness": cfg.to_dict(),
         "robot": {"model": args.robot, **engine.robot.describe()},
-        "adapter": {"name": name, "class": f"{adapter_cls.__module__}.{adapter_cls.__name__}",
+        "adapter": {"name": name, "policy_type": "motion_tracker" if tracker else "walking", "class": f"{adapter_cls.__module__}.{adapter_cls.__name__}",
                     "checkpoint": args.checkpoint, "checkpoint_sha256": sha256(args.checkpoint),
                     "config": adapter.config, "policy_dt": adapter.policy_dt,
                     "command_rate": adapter.command_rate,

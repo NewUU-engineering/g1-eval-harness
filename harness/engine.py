@@ -21,6 +21,11 @@ from harness.metrics import TrialMetrics, compute_metrics
 from harness.types import RobotState, JointCommand
 
 
+def is_motion_tracker(ref) -> bool:
+    """A reference with a root pose makes a motion tracker; None or joints only, a walking policy."""
+    return ref is not None and "root_pos" in ref and "root_quat" in ref
+
+
 @dataclass
 class TrialResult:
     scenario: str
@@ -175,7 +180,7 @@ class SimulationEngine:
 
         # ---- motion tracking ----
         ref0 = adapter.reference(0.0)
-        tracking = ref0 is not None and "root_pos" in ref0 and "root_quat" in ref0
+        tracking = is_motion_tracker(ref0)
         split = {"tracking_failure_reason": "", "tracking_failure_time_s": None, "tracking_failure_steps": 0} \
             if tracking and keep_running_after_tracking_failure else None
         if tracking and "q" not in ref0:
