@@ -84,6 +84,7 @@ python evaluate.py \
 ```
 
 Defaults: all 7 scenarios, seeds `0 1 2` (quick check; use 10 seeds for reports), command `vx=0.5 m/s`, gains from the policy.
+Motion trackers ignore the speed command, so they skip `stand_still` and run the other 6.
 
 **Motion trackers.** Checkpoints and motion files are not in the repo; §3d says where they come from.
 

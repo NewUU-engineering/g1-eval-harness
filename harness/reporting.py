@@ -99,7 +99,8 @@ def write_summary(out_dir: str, summary: Dict):
           f"- checkpoint: `{summary['adapter'].get('checkpoint')}` (sha256 `{summary['adapter'].get('checkpoint_sha256', 'n/a')}`)",
           f"- harness {summary['harness']['harness_version']}, physics {1 / summary['harness']['physics_dt']:.0f} Hz, "
           f"control {1 / summary['harness']['control_dt']:.0f} Hz, gains from **{summary['harness']['gains_mode']}**",
-          f"- seeds: {summary['seeds']}, command (vx, vy, yaw_rate): {summary['command']}", "",
+          f"- seeds: {summary['seeds']}, command (vx, vy, yaw_rate): "
+          f"{'n/a (motion tracker)' if summary['adapter'].get('policy_type') == 'motion_tracker' else summary['command']}", "",
           "Mean ± std over seeds. Velocity metrics exclude the first "
           f"{summary['harness']['tracking_warmup_s']} s and are n/a if the robot fell before that.", ""]
     if summary["harness"].get("keep_running_after_tracking_failure"):

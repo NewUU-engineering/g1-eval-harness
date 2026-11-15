@@ -95,7 +95,8 @@ def main():
     ap.add_argument("--checkpoint", default=None, help="policy weights (.pt/.onnx/...), if the adapter needs one")
     ap.add_argument("--adapter-config", default=None, help="YAML/JSON file passed to the adapter as `config`")
     ap.add_argument("--set", action="append", metavar="KEY=VALUE", help="adapter config override (repeatable)")
-    ap.add_argument("--scenarios", nargs="+", default=DEFAULT_SCENARIOS, help=f"default: all ({', '.join(DEFAULT_SCENARIOS)})")
+    ap.add_argument("--scenarios", nargs="+", default=None,
+                    help=f"default: all ({', '.join(DEFAULT_SCENARIOS)}); motion trackers skip stand_still")
     ap.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     ap.add_argument("--cmd-vel", nargs=3, type=float, default=[0.5, 0.0, 0.0], metavar=("VX", "VY", "YAW_RATE"))
     ap.add_argument("--robot", choices=sorted(ROBOT_MODELS), default=DEFAULT_ROBOT,
@@ -117,7 +118,7 @@ def main():
             print(f"{s.name:24s} {s.description}")
         return 0
 
-    unknown = [s for s in args.scenarios if s not in TEST_SCENARIOS]
+    unknown = [s for s in args.scenarios or [] if s not in TEST_SCENARIOS]
     if unknown:
         ap.error(f"Unknown scenarios {unknown}. Use --list-scenarios.")
 
@@ -126,6 +127,10 @@ def main():
     adapter = adapter_cls(checkpoint_path=args.checkpoint,
                           config=load_adapter_config(args.adapter_config, args.set))
     name = getattr(adapter, "name", adapter_cls.__name__)
+    tracker = is_motion_tracker(adapter.reference(0.0))
+    skipped = args.scenarios is None and tracker
+    if args.scenarios is None:
+        args.scenarios = [s for s in DEFAULT_SCENARIOS if not (tracker and s == "stand_still")]
 
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     out = args.output_dir or os.path.join("results", f"{name}_{stamp}")
@@ -137,11 +142,13 @@ def main():
     command = np.array(args.cmd_vel, dtype=np.float64)
 
     print(f"\n[HARNESS {HARNESS_VERSION}] policy={name}  scenarios={len(args.scenarios)}  seeds={args.seeds}")
-    print(f"  physics {1/cfg.physics_dt:.0f} Hz | control {1/cfg.control_dt:.0f} Hz | gains: {cfg.gains_mode} | cmd {command.tolist()}")
+    cmd = "n/a (motion tracker)" if tracker else command.tolist()
+    print(f"  physics {1/cfg.physics_dt:.0f} Hz | control {1/cfg.control_dt:.0f} Hz | gains: {cfg.gains_mode} | cmd {cmd}")
     print(f"  robot model: {args.robot} ({os.path.basename(cfg.model_xml)})")
-    tracker = is_motion_tracker(adapter.reference(0.0))
     print("  policy type: " + ("motion tracker (reference(t) has a root pose)" if tracker
                                else "walking (no root pose in reference(t))"))
+    if skipped:
+        print("  stand_still skipped: a motion tracker ignores the speed command (ask for it with --scenarios)")
     print(f"  output -> {out}\n")
 
     trials, aggregates, perturbations = {}, {}, {}
