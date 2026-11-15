@@ -57,7 +57,7 @@ python -m venv .venv && source .venv/bin/activate      # Python 3.9+
 pip install -r requirements.txt
 pip install torch            # recommended; without it the numpy fallback runs the example policy
 pip install onnx onnxruntime scipy   # only for the motion trackers (§2, §3d)
-python -m pytest -q tests    # 28 tests, ~5 s
+python -m pytest -q tests    # 30 tests, ~5 s
 ```
 
 Videos are rendered offscreen. On Linux `evaluate.py` uses `MUJOCO_GL=egl`

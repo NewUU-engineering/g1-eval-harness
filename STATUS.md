@@ -21,7 +21,7 @@
 | README: how to add your own policy | `README.md` §3 | 1.0.0, 2.0.0 | done (in-process, socket, DDS; motion trackers in §3d) |
 | Direct call **and** externally running policies, same metrics | `adapters/external/` | 1.0.0 | socket path done and tested; DDS path written, untested (below) |
 | Design based on existing sim2sim setups | `DESIGN.md` | 1.0.0 | done |
-| Tests | `tests/` (`python -m pytest -q tests`) | 1.0.0, 2.0.0 | 28/28 pass (15 from v1.0.0) |
+| Tests | `tests/` (`python -m pytest -q tests`) | 1.0.0, 2.0.0 | 30/30 pass (15 from v1.0.0) |
 | Motion-tracking policies | `harness/`, `METRICS.md` §3, `README.md` §3d | 2.0.0 | done; walking-policy results identical to v1.0.0 |
 | BeyondMimic adapter | `adapters/beyondmimic_adapter.py` | 2.0.0 | done, checked against mjlab and the ROS 2 stack on the LAFAN1 demo dance |
 | SONIC v1.1 adapter (encoder + decoder, mode `g1`) | `adapters/sonic_v1_1_adapter.py` | 2.0.0 | done, checked against NVIDIA's sim-to-sim on a tennis serve, a jump kick and their squat |
