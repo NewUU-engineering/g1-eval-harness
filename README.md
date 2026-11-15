@@ -47,7 +47,7 @@ Physics, PD law, scenarios, seeds and the other metrics are the same as for walk
 
 | | `ros2` (default) | `unitree_rl_gym` (v1) |
 |---|---|---|
-| Source | ROS 2 deployment stack's G1 (`unitree_description`, BSD) | Unitree's `g1_29dof_rev_1_0` (unitree_rl_gym) |
+| Source | ROS 2 deployment stack's G1: `unitree_description` 1.3.0, ROS 2 Jazzy package (BSD) | Unitree's `g1_29dof_rev_1_0` (unitree_rl_gym) |
 | Motor inertia (armature) | per joint, from the motor specs (0.0036–0.025) | 0.01 for every joint, from Unitree's 12-DoF model |
 | Contact shapes | capsule soles and hands | 4 spheres per foot, mesh hands |
 | Masses, kinematics, joint ranges, torque limits | same | same |
